@@ -4,8 +4,15 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Plug, Zap, TrendingUp, Check, ArrowRight } from "lucide-react";
 import { NavigationBar } from "../components/NavigationBar";
-import { InvoiceMockup } from "../components/InvoiceMockup";
-import { EarningsCalculator } from "../components/EarningsCalculator";
+import dynamic from "next/dynamic";
+const InvoiceMockup = dynamic(
+  () => import("../components/InvoiceMockup").then((m) => ({ default: m.InvoiceMockup })),
+  { ssr: false, loading: () => <div style={{ width: 400, height: 560 }} /> }
+);
+const EarningsCalculator = dynamic(
+  () => import("../components/EarningsCalculator").then((m) => ({ default: m.EarningsCalculator })),
+  { ssr: false, loading: () => <div style={{ height: 240 }} /> }
+);
 import { TickerBar } from "../components/TickerBar";
 import { FooterBar } from "../components/FooterBar";
 import { GlowButton } from "../components/ui/GlowButton";
