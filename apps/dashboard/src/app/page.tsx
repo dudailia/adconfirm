@@ -1,13 +1,27 @@
-import { Button } from "@adconfirm/ui";
+import { redirect } from "next/navigation";
+import { createClient } from "../lib/supabase/server";
 
-export default function DashboardHome() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="mb-4 text-3xl font-bold text-brand-900">
-        AdConfirm Dashboard
-      </h1>
-      <p className="mb-8 text-gray-600">Sign in to manage your campaigns</p>
-      <Button variant="primary">Sign in</Button>
-    </main>
-  );
+export default async function RootPage() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("id")
+    .eq("id", user.id)
+    .single();
+
+  if (business) redirect("/dashboard");
+
+  const { data: advertiser } = await supabase
+    .from("advertisers")
+    .select("id")
+    .eq("id", user.id)
+    .single();
+
+  if (advertiser) redirect("/advertiser/dashboard");
+
+  redirect("/login");
 }
