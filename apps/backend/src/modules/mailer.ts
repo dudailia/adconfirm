@@ -165,7 +165,7 @@ export async function sendInvoiceWithAd(
     to: invoiceData.customerEmail,
     subject: `Invoice ${invoiceData.invoiceNumber} from ${business.name}`,
     html,
-    reply_to: business.email,
+    replyTo: business.email,
   });
 
   if (error) {
