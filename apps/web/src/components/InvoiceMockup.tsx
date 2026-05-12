@@ -1,150 +1,245 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useRef, useEffect } from "react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "framer-motion";
 
 export function InvoiceMockup() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
+  const rawX = useMotionValue(0);
+  const rawY = useMotionValue(0);
 
-  const rotateX = useSpring(useTransform(mouseY, [-200, 200], [8, -8]), {
-    stiffness: 100,
-    damping: 25,
-  });
-  const rotateY = useSpring(useTransform(mouseX, [-200, 200], [-8, 8]), {
-    stiffness: 100,
-    damping: 25,
-  });
+  const springCfg = { damping: 30, stiffness: 120, mass: 0.8 };
+  const rotateY = useSpring(useTransform(rawX, [-300, 300], [-5, 5]), springCfg);
+  const rotateX = useSpring(useTransform(rawY, [-300, 300], [5, -5]), springCfg);
+  const translateX = useSpring(useTransform(rawX, [-300, 300], [-8, 8]), springCfg);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    mouseX.set(e.clientX - centerX);
-    mouseY.set(e.clientY - centerY);
-  };
-
-  const handleMouseLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
-  };
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    const handleMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const r = containerRef.current.getBoundingClientRect();
+      rawX.set(e.clientX - (r.left + r.width / 2));
+      rawY.set(e.clientY - (r.top + r.height / 2));
+    };
+    window.addEventListener("mousemove", handleMove, { passive: true });
+    return () => window.removeEventListener("mousemove", handleMove);
+  }, [rawX, rawY]);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative flex items-center justify-center w-full"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ perspective: "1200px" }}
-    >
+    <div ref={containerRef} style={{ perspective: "1200px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
       {/* Ambient glow */}
-      <div className="absolute inset-0 rounded-3xl blur-3xl opacity-30"
-        style={{ background: "radial-gradient(ellipse at center, rgba(0,102,255,0.3) 0%, transparent 70%)" }}
+      <div
+        style={{
+          position: "absolute",
+          width: 400,
+          height: 400,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(0,82,255,0.12) 0%, transparent 70%)",
+          filter: "blur(40px)",
+          pointerEvents: "none",
+        }}
       />
 
+      {/* Mount animation + parallax */}
       <motion.div
-        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        className="relative w-[340px] sm:w-[380px] bg-white rounded-2xl overflow-hidden text-gray-900 text-xs leading-relaxed"
-        whileHover={{ scale: 1.02 }}
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", damping: 20, stiffness: 80 }}
+        style={{ rotateX, rotateY, x: translateX, transformStyle: "preserve-3d" }}
       >
-        {/* Drop shadow via box-shadow */}
-        <div className="absolute inset-0 rounded-2xl pointer-events-none"
-          style={{ boxShadow: "0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.05)" }}
-        />
-
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="w-8 h-8 bg-gray-900 rounded-md mb-2 flex items-center justify-center">
-                <span className="text-white text-[10px] font-bold">M</span>
+        {/* Float loop */}
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        >
+          {/* Slight tilt wrapper */}
+          <div style={{ transform: "rotate(2deg)" }}>
+            <div
+              style={{
+                boxShadow: "0 24px 80px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.3)",
+                borderRadius: 8,
+                overflow: "hidden",
+                width: 400,
+                backgroundColor: "#FAFAF8",
+                fontFamily: "system-ui, sans-serif",
+              }}
+            >
+              {/* ─── HEADER ─── */}
+              <div style={{ padding: "22px 24px 14px", borderBottom: "1px solid #EBEBEA" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "#1A1A1A", letterSpacing: "0.02em" }}>
+                      MERIDIAN DESIGN STUDIO
+                    </div>
+                    <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
+                      meridian.studio · London, UK
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 10, letterSpacing: "0.15em", color: "#AAA", fontFamily: "monospace" }}>
+                      INVOICE
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 12, color: "#1A1A1A", fontFamily: "monospace", marginTop: 2 }}>
+                      INV-2024-0847
+                    </div>
+                    <div style={{ fontSize: 10, color: "#AAA", marginTop: 1 }}>Oct 14, 2024</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: 14, paddingTop: 10, borderTop: "1px solid #F2F2F0" }}>
+                  <div style={{ fontSize: 9, letterSpacing: "0.12em", color: "#BBB", textTransform: "uppercase" as const }}>Bill To</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#1A1A1A", marginTop: 2 }}>Thomas &amp; Co.</div>
+                  <div style={{ fontSize: 10, color: "#999" }}>thomas@thomasandco.com</div>
+                </div>
               </div>
-              <div className="font-semibold text-sm text-gray-900">Meridian Design Studio</div>
-              <div className="text-[11px] text-gray-400 mt-0.5">hello@meridiandesign.co</div>
-            </div>
-            <div className="text-right">
-              <div className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider">Invoice</div>
-              <div className="font-mono font-semibold text-sm text-gray-900 mt-0.5">#INV-2024-0847</div>
-              <div className="text-[11px] text-gray-400 mt-1">Due 30 Nov 2024</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Bill to */}
-        <div className="px-6 py-2.5 bg-gray-50 border-b border-gray-100">
-          <div className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">Bill To</div>
-          <div className="font-medium text-gray-900 text-[11px]">Acme Technologies Ltd</div>
-        </div>
-
-        {/* Line items */}
-        <div className="px-6 py-3">
-          <div className="grid grid-cols-3 text-[9px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-1.5 mb-1.5">
-            <span className="col-span-2">Description</span>
-            <span className="text-right">Amount</span>
-          </div>
-          {[
-            { item: "Brand Strategy", amount: "£2,400" },
-            { item: "Visual Identity", amount: "£1,800" },
-            { item: "Web Design", amount: "£3,200" },
-          ].map((row) => (
-            <div key={row.item} className="grid grid-cols-3 py-1.5 border-b border-gray-50">
-              <span className="col-span-2 text-[11px] text-gray-700">{row.item}</span>
-              <span className="text-right font-mono text-[11px] text-gray-900">{row.amount}</span>
-            </div>
-          ))}
-
-          <div className="mt-2 space-y-1 pt-1">
-            <div className="flex justify-between text-[11px] text-gray-400">
-              <span>Subtotal</span><span className="font-mono">£7,400.00</span>
-            </div>
-            <div className="flex justify-between text-[11px] text-gray-400">
-              <span>VAT (20%)</span><span className="font-mono">£1,480.00</span>
-            </div>
-            <div className="flex justify-between font-bold text-gray-900 text-sm pt-1.5 border-t border-gray-200">
-              <span>Total Due</span><span className="font-mono">£8,880.00</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Fiscal close */}
-        <div className="px-6 py-2 flex items-center gap-2">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-[8px] font-mono text-gray-300 whitespace-nowrap tracking-widest">─ FISCAL CLOSE ─</span>
-          <div className="flex-1 h-px bg-gray-200" />
-        </div>
-
-        {/* Ad block */}
-        <div className="mx-4 mb-4 rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-3">
-          <div className="text-[8px] font-mono text-blue-400 uppercase tracking-[0.15em] mb-1.5">Sponsored</div>
-          <div className="font-semibold text-[11px] text-gray-900 mb-1 leading-tight">
-            Save 20% on your next software subscription
-          </div>
-          <div className="text-[9px] text-gray-500 mb-2 leading-relaxed">
-            Exclusive offer for invoice recipients
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="bg-blue-600 text-white text-[9px] font-semibold px-2.5 py-1 rounded-md cursor-pointer">
-              Claim Offer →
-            </span>
-            {/* QR code placeholder */}
-            <div className="w-9 h-9 bg-white rounded border border-gray-200 flex items-center justify-center p-1">
-              <div className="w-full h-full grid grid-cols-3 gap-px">
-                {[1,1,1,1,0,1,1,1,1].map((v, i) => (
-                  <div key={i} className={`rounded-[1px] ${v ? 'bg-gray-800' : 'bg-transparent'}`} />
+              {/* ─── LINE ITEMS ─── */}
+              <div style={{ padding: "14px 24px 0" }}>
+                {[
+                  { desc: "Brand Strategy", amount: "£2,400" },
+                  { desc: "Visual Identity", amount: "£1,800" },
+                  { desc: "Web Design", amount: "£3,200" },
+                ].map(({ desc, amount }) => (
+                  <div
+                    key={desc}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 11,
+                      color: "#444",
+                      padding: "5px 0",
+                      borderBottom: "1px solid #F5F5F3",
+                    }}
+                  >
+                    <span>{desc}</span>
+                    <span style={{ fontFamily: "monospace", fontWeight: 500, color: "#1A1A1A" }}>{amount}</span>
+                  </div>
                 ))}
               </div>
+
+              {/* ─── TOTALS ─── */}
+              <div style={{ padding: "10px 24px 14px" }}>
+                {[
+                  { label: "Subtotal", value: "£7,400" },
+                  { label: "VAT (20%)", value: "£1,480" },
+                ].map(({ label, value }) => (
+                  <div
+                    key={label}
+                    style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#999", padding: "2px 0" }}
+                  >
+                    <span>{label}</span>
+                    <span style={{ fontFamily: "monospace" }}>{value}</span>
+                  </div>
+                ))}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#1A1A1A",
+                    padding: "7px 0 0",
+                    borderTop: "1px solid #E8E8E6",
+                    marginTop: 4,
+                  }}
+                >
+                  <span>TOTAL</span>
+                  <span style={{ fontFamily: "monospace" }}>£8,880</span>
+                </div>
+              </div>
+
+              {/* ─── FISCAL CLOSE ─── */}
+              <div style={{ padding: "6px 24px", display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ flex: 1, borderTop: "1px dashed #D8D8D5" }} />
+                <span style={{ fontSize: 8, letterSpacing: "0.15em", color: "#C0C0BC", fontFamily: "monospace", whiteSpace: "nowrap" as const }}>
+                  FISCAL CLOSE
+                </span>
+                <div style={{ flex: 1, borderTop: "1px dashed #D8D8D5" }} />
+              </div>
+
+              {/* ─── AD BLOCK ─── */}
+              <motion.div
+                initial={{ boxShadow: "inset 0 0 0 rgba(0,82,255,0)" }}
+                animate={{
+                  boxShadow: [
+                    "inset 0 0 0 rgba(0,82,255,0)",
+                    "inset 0 0 20px rgba(0,82,255,0.07)",
+                    "inset 0 0 0 rgba(0,82,255,0)",
+                  ],
+                }}
+                transition={{ delay: 2, duration: 1.8, ease: "easeInOut" }}
+                style={{
+                  borderTop: "1px solid rgba(0,82,255,0.25)",
+                  background: "rgba(0,82,255,0.03)",
+                  padding: "10px 24px 14px",
+                }}
+              >
+                <div style={{ fontSize: 8, letterSpacing: "0.18em", color: "#B0B0B0", marginBottom: 7, fontFamily: "monospace" }}>
+                  SPONSORED
+                </div>
+                {/* Brand placeholder */}
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 5,
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    marginBottom: 7,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span style={{ fontSize: 9, fontWeight: 700, color: "#fff", fontFamily: "monospace" }}>BX</span>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#1A1A1A", marginBottom: 3, lineHeight: 1.3 }}>
+                  Save 20% on business software
+                </div>
+                <div style={{ fontSize: 10, color: "#777", marginBottom: 8, lineHeight: 1.5 }}>
+                  Tools your team will actually use.<br />Claim your discount today.
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 10, color: "#0052FF", fontWeight: 600, borderBottom: "1px solid rgba(0,82,255,0.3)", cursor: "pointer" }}>
+                    Claim Offer →
+                  </span>
+                  {/* QR placeholder */}
+                  <div
+                    style={{
+                      width: 38,
+                      height: 38,
+                      border: "1px solid #E0E0DD",
+                      borderRadius: 3,
+                      background: "#FFF",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(6, 1fr)",
+                      gap: 1.5,
+                      padding: 4,
+                    }}
+                  >
+                    {Array.from({ length: 36 }).map((_, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          background: [0,1,2,3,4,5,6,11,12,13,17,18,23,24,30,31,32,33,34,35,7,16,8,15,25,26].includes(i)
+                            ? "#1A1A1A" : "transparent",
+                          borderRadius: 1,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div style={{ fontSize: 8, color: "#D0D0CC", marginTop: 7, fontFamily: "monospace" }}>
+                  Powered by AdConfirm
+                </div>
+              </motion.div>
             </div>
           </div>
-        </div>
-
-        {/* AdConfirm badge */}
-        <div className="px-4 pb-3 flex justify-end">
-          <span className="text-[7px] font-mono text-gray-300 tracking-wider">Powered by AdConfirm</span>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
