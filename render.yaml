@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: adconfirm-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: .
+    buildCommand: npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @adconfirm/backend build
+    startCommand: node apps/backend/dist/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: XERO_REDIRECT_URI
+        value: https://adconfirm-api.onrender.com/auth/xero/callback
+      - key: DASHBOARD_URL
+        value: https://adconfirm-dashboard.vercel.app
+      # ── Set these in the Render dashboard after connecting GitHub ──
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: XERO_CLIENT_ID
+        sync: false
+      - key: XERO_CLIENT_SECRET
+        sync: false
+      - key: XERO_WEBHOOK_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: invoices@adconfirm.io
