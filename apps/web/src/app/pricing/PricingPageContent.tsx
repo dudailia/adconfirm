@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+import { XERO_CONNECT_URL } from '../../lib/config';
 
 const businessFeatures = [
   "Xero OAuth integration",
@@ -86,7 +87,7 @@ export function PricingPageContent() {
               ))}
             </ul>
             <motion.a
-              href="http://localhost:4000/auth/xero/connect"
+              href={XERO_CONNECT_URL}
               whileHover={{ scale: 1.02 }}
               className="block text-center py-3 bg-[#0066FF] text-white rounded-xl font-medium"
             >

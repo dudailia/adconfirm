@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { XERO_CONNECT_URL } from '../../lib/config';
 
 export function FinalCTA() {
   return (
@@ -26,7 +27,7 @@ export function FinalCTA() {
               Connect Xero in 60 seconds. First placement free. No credit card required.
             </p>
             <motion.a
-              href="http://localhost:4000/auth/xero/connect"
+              href={XERO_CONNECT_URL}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               className="inline-flex items-center gap-2 px-8 py-4 bg-[#0066FF] text-white font-medium rounded-xl text-lg animate-glow-pulse"

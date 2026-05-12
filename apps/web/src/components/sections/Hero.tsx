@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { InvoiceMockup } from "../InvoiceMockup";
+import { XERO_CONNECT_URL } from '../../lib/config';
 
 const HEADLINE = "Your invoices.\nNow generating revenue.";
 
@@ -78,7 +79,7 @@ export function Hero() {
               className="mt-8 flex flex-col sm:flex-row gap-3"
             >
               <motion.a
-                href="http://localhost:4000/auth/xero/connect"
+                href={XERO_CONNECT_URL}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#0066FF] text-white font-medium rounded-xl animate-glow-pulse"

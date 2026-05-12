@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+import { XERO_CONNECT_URL } from '../../lib/config';
 
 const plans = [
   {
@@ -17,7 +18,7 @@ const plans = [
       "Monthly payouts",
     ],
     cta: "Start Free",
-    href: "http://localhost:4000/auth/xero/connect",
+    href: XERO_CONNECT_URL,
     highlight: false,
   },
   {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useScrollBorder } from "../lib/hooks";
 import clsx from "clsx";
+import { XERO_CONNECT_URL } from '../lib/config';
 
 export function Navigation() {
   const hasBorder = useScrollBorder();
@@ -45,7 +46,7 @@ export function Navigation() {
         </div>
 
         <a
-          href="http://localhost:4000/auth/xero/connect"
+          href={XERO_CONNECT_URL}
           className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#0066FF] text-white text-sm font-medium hover:bg-[#0052CC] transition-colors duration-200 animate-glow-pulse"
         >
           Connect Your Xero
