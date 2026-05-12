@@ -1,8 +1,8 @@
 import type { Database } from "@adconfirm/db";
 import { logger } from "./logger";
 import { selectAd } from "./adEngine";
-import { sendAdReceipt } from "./mailer";
-import { insertReceipt, insertPlacement, logAdEvent } from "./db";
+import { sendAdReceipt, sendInvoiceWithAd } from "./mailer";
+import { insertReceipt, insertPlacement, logAdEvent, getBusinessAdSettings, createReceipt, createPlacement, markPlacementDelivered } from "./db";
 
 type Channel = Database["public"]["Tables"]["receipts"]["Row"]["channel"];
 type DocumentType = Database["public"]["Tables"]["receipts"]["Row"]["document_type"];
@@ -90,4 +90,88 @@ export async function processReceiptEvent(input: ProcessorInput): Promise<void> 
     },
     "receipt event complete"
   );
+}
+
+type BusinessRow = Database["public"]["Tables"]["businesses"]["Row"];
+
+export interface InvoiceData {
+  invoiceId: string;
+  tenantId: string;
+  invoiceNumber: string;
+  customerEmail: string | null;
+  contactName: string;
+  total: number;
+  currency: string;
+  date: string;
+  lineItems: Array<{
+    description: string;
+    quantity: number;
+    unitAmount: number;
+    lineAmount: number;
+  }>;
+}
+
+export async function processInvoice(
+  business: BusinessRow,
+  invoiceData: InvoiceData
+): Promise<void> {
+  // PATENT-CRITICAL: These two lines must execute first, before any async calls
+  const injected_at = new Date();
+  const injection_unix_ms = Date.now();
+  logger.info(
+    { injected_at: injected_at.toISOString(), injection_unix_ms, businessId: business.id },
+    "processInvoice: timestamps captured"
+  );
+
+  const settings = await getBusinessAdSettings(business.id);
+  if (settings && !settings.enabled) {
+    logger.info({ businessId: business.id }, "ad settings disabled — skipping ad injection");
+    return;
+  }
+
+  const ad = await selectAd([], [], []);
+
+  const totalCents = Math.round(invoiceData.total * 100);
+  const receipt = await createReceipt(
+    business.id,
+    invoiceData.invoiceId,
+    "xero",
+    "invoice",
+    invoiceData.customerEmail,
+    totalCents,
+    invoiceData.currency,
+    new Date(invoiceData.date)
+  );
+
+  if (!ad) {
+    logger.warn({ receiptId: receipt.id }, "no ad available — delivering without ad");
+    if (invoiceData.customerEmail) {
+      await sendInvoiceWithAd(invoiceData, null, business);
+    }
+    return;
+  }
+
+  const placement = await createPlacement(
+    receipt.id,
+    ad.creative.id,
+    injected_at,
+    injection_unix_ms
+  );
+
+  await logAdEvent({ placement_id: placement.id, event_type: "impression" });
+
+  if (invoiceData.customerEmail) {
+    await sendInvoiceWithAd(invoiceData, ad.creative, business);
+    await markPlacementDelivered(placement.id);
+    logger.info(
+      {
+        receipt_id: receipt.id,
+        placement_id: placement.id,
+        business_id: business.id,
+        ad_id: ad.creative.id,
+        injection_unix_ms,
+      },
+      "processInvoice: complete"
+    );
+  }
 }
