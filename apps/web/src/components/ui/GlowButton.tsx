@@ -10,6 +10,7 @@ interface GlowButtonProps {
   onClick?: () => void;
   variant?: "primary" | "ghost" | "gold";
   className?: string;
+  style?: CSSProperties;
   type?: "button" | "submit";
   disabled?: boolean;
   "data-cursor-gold"?: string;
@@ -63,10 +64,11 @@ export function GlowButton({
   onClick,
   variant = "primary",
   className,
+  style: styleProp,
   type = "button",
   disabled,
 }: GlowButtonProps) {
-  const style = { ...BASE, ...VARIANT_STYLES[variant] };
+  const style = { ...BASE, ...VARIANT_STYLES[variant], ...styleProp };
 
   const hoverClass = clsx(
     variant === "primary" &&

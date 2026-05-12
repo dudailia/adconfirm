@@ -141,21 +141,24 @@ export function EarningsCalculator() {
         >
           {formattedMonthly}
         </motion.div>
-        <motion.div
+        <div
           style={{
             fontFamily: "var(--font-mono)",
             fontSize: 18,
             color: "var(--text-2)",
             marginTop: 6,
+            display: "flex",
+            alignItems: "baseline",
+            gap: 6,
           }}
         >
-          {formattedAnnual}
+          <motion.span>{formattedAnnual}</motion.span>
           <span
-            style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-3)", marginLeft: 6 }}
+            style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-3)" }}
           >
             per year
           </span>
-        </motion.div>
+        </div>
       </div>
 
       <div

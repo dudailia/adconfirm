@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
 
-export function LiveTimestamp({ className }: { className?: string }) {
+export function LiveTimestamp({ className, style: styleProp }: { className?: string; style?: CSSProperties }) {
   const spanRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
@@ -40,6 +41,7 @@ export function LiveTimestamp({ className }: { className?: string }) {
         letterSpacing: "0.1em",
         transition: "opacity 0.05s",
         userSelect: "none",
+        ...styleProp,
       }}
     />
   );
