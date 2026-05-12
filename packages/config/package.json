@@ -6,5 +6,10 @@
     "./tsconfig/*": "./tsconfig/*.json",
     "./eslint": "./eslint/index.js",
     "./tailwind": "./tailwind/base.ts"
+  },
+  "peerDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "tailwindcss": "^3.4.0"
   }
 }

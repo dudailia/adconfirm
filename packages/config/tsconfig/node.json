@@ -4,6 +4,7 @@
   "extends": "./base.json",
   "compilerOptions": {
     "module": "CommonJS",
+    "moduleResolution": "node16",
     "lib": ["ES2022"],
     "outDir": "dist"
   }
