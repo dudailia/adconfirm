@@ -36,9 +36,15 @@ html.lenis { height: auto; }
 .lenis.lenis-smooth { scroll-behavior: auto !important; }
 .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
 
-/* Hide default cursor on pointer devices */
+/* Hide default cursor on pointer (mouse) devices — custom cursor handles it */
 @media (pointer: fine) {
   * { cursor: none !important; }
+}
+
+/* Touch devices: hide custom cursor elements, restore native cursor */
+@media (pointer: coarse) {
+  [aria-hidden="true"] { display: none !important; }
+  * { cursor: auto !important; }
 }
 
 /* Scrollbar */

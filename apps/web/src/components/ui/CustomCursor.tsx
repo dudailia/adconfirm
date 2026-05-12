@@ -1,123 +1,137 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 export function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
-  const ringWrapRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isGold, setIsGold] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.matchMedia("(pointer: coarse)").matches) return;
+    const dot = dotRef.current;
+    const ring = ringRef.current;
+    if (!dot || !ring) return;
 
-    setIsVisible(true);
+    // Skip entirely on touch devices
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      dot.style.display = "none";
+      ring.style.display = "none";
+      return;
+    }
 
-    let mouseX = 0;
-    let mouseY = 0;
-    let ringX = 0;
-    let ringY = 0;
+    // Current positions — stored outside React, no state triggers
+    let mouseX = -100, mouseY = -100;
+    let ringX = -100, ringY = -100;
     let rafId: number;
+    let isHovering = false;
+    let isOnCTA = false;
 
+    // Dot follows cursor instantly — direct DOM mutation, zero React involvement
     const onMouseMove = (e: MouseEvent) => {
       mouseX = e.clientX;
       mouseY = e.clientY;
+      dot.style.transform = `translate(${mouseX - 4}px, ${mouseY - 4}px)`;
     };
 
-    const isInteractive = (el: Element | null): boolean => {
-      if (!el) return false;
-      const tag = el.tagName;
-      if (tag === "A" || tag === "BUTTON" || tag === "INPUT" || tag === "TEXTAREA") return true;
-      if ((el as HTMLElement).getAttribute("role") === "button") return true;
-      return false;
-    };
-
+    // Hover detection via event delegation — one listener on document
     const onMouseOver = (e: MouseEvent) => {
-      const target = e.target as Element;
-      const interactive =
-        isInteractive(target) ||
-        !!target.closest("a") ||
-        !!target.closest("button");
-      setIsHovered(interactive);
-      if (interactive) {
-        const el = target.closest("[data-cursor-gold]");
-        setIsGold(!!el);
-      } else {
-        setIsGold(false);
+      const target = e.target as HTMLElement;
+      const isCTA = !!target.closest("[data-cta]");
+      const isLink = !!target.closest('a, button, [role="button"]');
+
+      if (isCTA && !isOnCTA) {
+        isOnCTA = true;
+        isHovering = true;
+        ring.style.width = "60px";
+        ring.style.height = "60px";
+        ring.style.borderColor = "var(--gold)";
+        ring.style.backgroundColor = "rgba(201, 168, 76, 0.08)";
+      } else if (isLink && !isHovering) {
+        isHovering = true;
+        ring.style.width = "44px";
+        ring.style.height = "44px";
+        ring.style.borderColor = "var(--accent)";
+        ring.style.backgroundColor = "transparent";
       }
     };
 
-    const animate = () => {
-      if (dotRef.current) {
-        dotRef.current.style.transform = `translate(${mouseX - 4}px, ${mouseY - 4}px)`;
+    const onMouseOut = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const isLink = !!target.closest('a, button, [role="button"]');
+      if (isLink) {
+        isHovering = false;
+        isOnCTA = false;
+        ring.style.width = "36px";
+        ring.style.height = "36px";
+        ring.style.borderColor = "rgba(240, 244, 255, 0.35)";
+        ring.style.backgroundColor = "transparent";
       }
-      ringX += (mouseX - ringX) * 0.12;
-      ringY += (mouseY - ringY) * 0.12;
-      if (ringWrapRef.current) {
-        ringWrapRef.current.style.transform = `translate(${ringX - 20}px, ${ringY - 20}px)`;
-      }
-      rafId = requestAnimationFrame(animate);
     };
 
-    rafId = requestAnimationFrame(animate);
+    // Ring lerps toward cursor at true 60/120fps — bypasses React entirely
+    const LERP = 0.14;
+
+    const tick = () => {
+      ringX += (mouseX - ringX) * LERP;
+      ringY += (mouseY - ringY) * LERP;
+      // Direct style mutation — no setState, no re-render
+      ring.style.transform = `translate(${ringX - 18}px, ${ringY - 18}px)`;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+
     window.addEventListener("mousemove", onMouseMove, { passive: true });
-    document.addEventListener("mouseover", onMouseOver);
+    document.addEventListener("mouseover", onMouseOver, { passive: true });
+    document.addEventListener("mouseout", onMouseOut, { passive: true });
 
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseover", onMouseOver);
+      document.removeEventListener("mouseout", onMouseOut);
     };
   }, []);
 
-  if (!isVisible) return null;
-
   return (
     <>
-      {/* Solid dot — instant tracking */}
+      {/* Dot — 8px, instant position via RAF, mix-blend-mode: difference */}
       <div
         ref={dotRef}
+        aria-hidden="true"
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          width: 8,
-          height: 8,
+          width: "8px",
+          height: "8px",
           borderRadius: "50%",
-          backgroundColor: "white",
-          zIndex: 99999,
+          backgroundColor: "var(--text-1)",
           pointerEvents: "none",
+          zIndex: 99999,
           mixBlendMode: "difference",
           willChange: "transform",
         }}
       />
-      {/* Ring wrapper — lerp-tracked */}
+      {/* Ring — 36px default, lerp trails behind cursor */}
       <div
-        ref={ringWrapRef}
+        ref={ringRef}
+        aria-hidden="true"
         style={{
           position: "fixed",
           top: 0,
           left: 0,
-          zIndex: 99999,
+          width: "36px",
+          height: "36px",
+          borderRadius: "50%",
+          border: "1px solid rgba(240, 244, 255, 0.35)",
           pointerEvents: "none",
+          zIndex: 99998,
           willChange: "transform",
+          // Transitions ONLY for size/color — never for position (that's the RAF's job)
+          transition:
+            "width 0.2s cubic-bezier(0.4,0,0.2,1), height 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s ease, background-color 0.2s ease",
         }}
-      >
-        <div
-          ref={ringRef}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: "50%",
-            border: `1.5px solid ${isGold ? "var(--gold)" : "rgba(255,255,255,0.5)"}`,
-            transform: isHovered ? "scale(1.5)" : "scale(1)",
-            transition: "transform 0.2s cubic-bezier(0.4,0,0.2,1), border-color 0.2s ease",
-          }}
-        />
-      </div>
+      />
     </>
   );
 }

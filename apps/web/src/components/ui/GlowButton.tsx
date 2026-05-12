@@ -81,12 +81,15 @@ export function GlowButton({
     className
   );
 
+  const isCTA = variant === "primary" || variant === "gold";
+
   if (href && !disabled) {
     return (
       <Link
         href={href}
         style={style}
         className={hoverClass}
+        data-cta={isCTA ? "true" : undefined}
         data-cursor-gold={variant === "gold" ? "true" : undefined}
       >
         {children}
@@ -101,6 +104,7 @@ export function GlowButton({
       disabled={disabled}
       style={style}
       className={hoverClass}
+      data-cta={isCTA ? "true" : undefined}
       data-cursor-gold={variant === "gold" ? "true" : undefined}
     >
       {children}
