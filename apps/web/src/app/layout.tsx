@@ -1,5 +1,30 @@
 import type { Metadata } from "next";
+import { Playfair_Display, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import { LenisProvider } from "../components/providers/LenisProvider";
+import { CustomCursor } from "../components/ui/CustomCursor";
 import "./globals.css";
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const hanken = Hanken_Grotesk({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const ibmPlex = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -7,8 +32,8 @@ export const metadata: Metadata = {
     template: "%s | AdConfirm",
   },
   description:
-    "Turn your invoices into a revenue channel. AdConfirm places targeted ads on the invoices you already send. Earn per placement. Zero friction.",
-  keywords: ["invoice advertising", "Xero integration", "B2B ads", "invoice revenue"],
+    "AdConfirm injects targeted ads into invoices at the millisecond of document generation. Turn your invoice stack into a media channel.",
+  keywords: ["invoice advertising", "Xero integration", "B2B ads", "invoice monetization"],
   openGraph: {
     title: "AdConfirm — Invoice Advertising Network",
     description: "Your invoices. Now generating revenue.",
@@ -18,29 +43,25 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AdConfirm — Invoice Advertising Network",
+    title: "AdConfirm",
     description: "Your invoices. Now generating revenue.",
   },
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@300;400;500&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="bg-background text-white antialiased">
-        {children}
+    <html
+      lang="en"
+      className={`${playfair.variable} ${hanken.variable} ${ibmPlex.variable}`}
+      style={{ background: "#04070F" }}
+    >
+      <body>
+        <LenisProvider>
+          <CustomCursor />
+          {children}
+          <Analytics />
+        </LenisProvider>
       </body>
     </html>
   );

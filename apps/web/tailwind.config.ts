@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: ["class"],
@@ -9,41 +10,69 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#050A14",
-        surface: "#0D1629",
-        "surface-2": "#162035",
-        accent: "#0066FF",
-        "accent-dim": "#0052CC",
-        muted: "#1E2D45",
-        "muted-fg": "#9AA5B4",
-        border: "rgba(255,255,255,0.08)",
+        bg:            "#04070F",
+        "bg-2":        "#080D1A",
+        "bg-3":        "#0C1222",
+        border:        "#1A2540",
+        "border-glow": "#0047CC",
+        accent:        "#0052FF",
+        "accent-2":    "#00C2FF",
+        gold:          "#C9A84C",
+        "text-1":      "#F0F4FF",
+        "text-2":      "#8A9BC4",
+        "text-3":      "#4A5878",
+        success:       "#00E5A0",
+        danger:        "#FF3B5C",
       },
       fontFamily: {
-        serif: ["var(--font-instrument-serif)", "Georgia", "serif"],
-        mono: ["var(--font-ibm-plex-mono)", "Courier New", "monospace"],
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-      },
-      backgroundImage: {
-        "accent-glow": "radial-gradient(ellipse at center, rgba(0,102,255,0.15) 0%, transparent 70%)",
-        "grid-pattern": "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-      },
-      animation: {
-        "glow-pulse": "glow-pulse 3s ease-in-out infinite",
-        "float": "float 6s ease-in-out infinite",
+        display: ["var(--font-display)", "Georgia", "serif"],
+        sans:    ["var(--font-sans)", "system-ui", "sans-serif"],
+        mono:    ["var(--font-mono)", "monospace"],
       },
       keyframes: {
-        "glow-pulse": {
-          "0%, 100%": { boxShadow: "0 0 20px rgba(0,102,255,0.3)" },
-          "50%": { boxShadow: "0 0 40px rgba(0,102,255,0.6)" },
-        },
-        "float": {
+        float: {
           "0%, 100%": { transform: "translateY(0px)" },
-          "50%": { transform: "translateY(-12px)" },
+          "50%":       { transform: "translateY(-12px)" },
         },
+        "pulse-glow": {
+          "0%, 100%": { boxShadow: "0 0 20px rgba(0,82,255,0.3), 0 0 60px rgba(0,82,255,0.1)" },
+          "50%":       { boxShadow: "0 0 40px rgba(0,82,255,0.6), 0 0 80px rgba(0,82,255,0.3)" },
+        },
+        "scan-line": {
+          "0%":   { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(100vh)" },
+        },
+        "counter-up": {
+          "0%":   { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        flicker: {
+          "0%, 100%": { opacity: "1" },
+          "25%":       { opacity: "0.85" },
+          "50%":       { opacity: "1" },
+          "75%":       { opacity: "0.92" },
+        },
+        marquee: {
+          "0%":   { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
+        "border-flow": {
+          "0%":   { backgroundPosition: "0% 50%" },
+          "100%": { backgroundPosition: "100% 50%" },
+        },
+      },
+      animation: {
+        float:        "float 6s ease-in-out infinite",
+        "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "scan-line":  "scan-line 3s linear infinite",
+        "counter-up": "counter-up 0.4s ease-out forwards",
+        flicker:      "flicker 0.15s ease-in-out",
+        marquee:      "marquee 30s linear infinite",
+        "border-flow":"border-flow 3s linear infinite",
       },
     },
   },
-  plugins: [],
+  plugins: [animate],
 };
 
 export default config;
