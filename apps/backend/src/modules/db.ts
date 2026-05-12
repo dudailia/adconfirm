@@ -8,6 +8,7 @@ type ReceiptRow = Database["public"]["Tables"]["receipts"]["Row"];
 type PlacementInsert = Database["public"]["Tables"]["receipt_ad_placements"]["Insert"];
 type PlacementRow = Database["public"]["Tables"]["receipt_ad_placements"]["Row"];
 type AdEventInsert = Database["public"]["Tables"]["ad_events"]["Insert"];
+type AdSettingsRow = Database["public"]["Tables"]["business_ad_settings"]["Row"];
 type CampaignRow = Database["public"]["Tables"]["ad_campaigns"]["Row"];
 type CreativeRow = Database["public"]["Tables"]["ad_creatives"]["Row"];
 
@@ -84,4 +85,58 @@ export async function logAdEvent(payload: AdEventInsert): Promise<void> {
   if (error) {
     logger.error({ err: error }, "logAdEvent failed");
   }
+}
+
+export async function getBusinessAdSettings(
+  businessId: string
+): Promise<AdSettingsRow | null> {
+  const { data, error } = await db
+    .from("business_ad_settings")
+    .select("*")
+    .eq("business_id", businessId)
+    .single();
+  if (error) {
+    logger.error({ err: error, businessId }, "getBusinessAdSettings failed");
+    return null;
+  }
+  return data;
+}
+
+export async function createReceipt(
+  businessId: string,
+  externalId: string,
+  channel: ReceiptInsert["channel"],
+  documentType: ReceiptInsert["document_type"],
+  customerEmail: string | null,
+  totalCents: number,
+  currency: string,
+  issuedAt: Date
+): Promise<ReceiptRow> {
+  return insertReceipt({
+    business_id: businessId,
+    external_id: externalId,
+    channel,
+    document_type: documentType,
+    customer_email: customerEmail,
+    total_cents: totalCents,
+    currency,
+    issued_at: issuedAt.toISOString(),
+  });
+}
+
+export async function createPlacement(
+  receiptId: string,
+  adCreativeId: string,
+  injectedAt: Date,
+  injectionUnixMs: number
+): Promise<PlacementRow> {
+  return insertPlacement({
+    receipt_id: receiptId,
+    ad_creative_id: adCreativeId,
+    injected_at: injectedAt.toISOString(),
+    injection_unix_ms: injectionUnixMs,
+    position_index: 0,
+    delivered: false,
+    delivery_channel: "email",
+  });
 }
