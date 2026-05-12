@@ -1,26 +1,25 @@
 import type { Metadata } from "next";
-import { Navigation } from "../../components/Navigation";
-import { Footer } from "../../components/Footer";
-import { FinalCTA } from "../../components/sections/FinalCTA";
+import { NavigationBar } from "../../components/NavigationBar";
+import { FooterBar } from "../../components/FooterBar";
 import { PricingPageContent } from "./PricingPageContent";
 
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Free for businesses. CPM-based for advertisers. No hidden fees, no lock-in.",
+    "AdConfirm is free for businesses — we earn when you earn. Advertisers pay CPM with no minimums. Simple, transparent, aligned.",
   openGraph: {
     title: "AdConfirm Pricing — Free for Businesses, CPM for Advertisers",
-    description: "Simple, transparent pricing with no hidden fees.",
+    description:
+      "Free to join. 70% revenue share for businesses. £0.10 CPM for advertisers. No hidden fees, no lock-in.",
   },
 };
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen bg-[#050A14]">
-      <Navigation />
+    <main style={{ background: "var(--bg)", color: "var(--text-1)" }}>
+      <NavigationBar />
       <PricingPageContent />
-      <FinalCTA />
-      <Footer />
+      <FooterBar />
     </main>
   );
 }
