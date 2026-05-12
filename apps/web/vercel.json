@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=@adconfirm/web",
+  "installCommand": "pnpm install --frozen-lockfile"
+}
