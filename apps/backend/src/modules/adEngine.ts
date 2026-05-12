@@ -28,7 +28,8 @@ function weightedRandom<T extends { weight: number }>(items: T[]): T | null {
 
 export async function selectAd(
   businessIndustries: string[],
-  businessRegions: string[]
+  businessRegions: string[],
+  blockedAdvertiserIds: string[] = []
 ): Promise<SelectedAd | null> {
   const campaigns = await getActiveCampaignsWithCreatives();
   const today = new Date().toISOString().split("T")[0]!;
@@ -40,6 +41,7 @@ export async function selectAd(
     if (!hasOverlap(businessIndustries, c.target_industries)) return false;
     if (!hasOverlap(businessRegions, c.target_regions)) return false;
     if (!c.ad_creatives || c.ad_creatives.length === 0) return false;
+    if (blockedAdvertiserIds.length > 0 && blockedAdvertiserIds.includes(c.advertiser_id)) return false;
     return true;
   });
 
