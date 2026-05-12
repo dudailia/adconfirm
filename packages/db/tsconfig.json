@@ -1,0 +1,8 @@
+{
+  "extends": "@adconfirm/config/tsconfig/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "noEmit": true
+  },
+  "include": ["src"]
+}
