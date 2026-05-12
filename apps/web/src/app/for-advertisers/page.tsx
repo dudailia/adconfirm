@@ -1,26 +1,25 @@
 import type { Metadata } from "next";
-import { Navigation } from "../../components/Navigation";
-import { Footer } from "../../components/Footer";
-import { FinalCTA } from "../../components/sections/FinalCTA";
+import { NavigationBar } from "../../components/NavigationBar";
+import { FooterBar } from "../../components/FooterBar";
 import { AdvertiserPageContent } from "./AdvertiserPageContent";
 
 export const metadata: Metadata = {
   title: "For Advertisers",
   description:
-    "Reach B2B customers at the highest-intent moment: the invoice. CPM pricing, no minimums, verified business audience.",
+    "Place targeted ads on B2B invoices at the moment of purchase. 40%+ open rates, CPM pricing, no minimums. Reach buyers when they spend.",
   openGraph: {
-    title: "AdConfirm for Advertisers — Reach Buyers at Purchase Moment",
-    description: "Invoice advertising. 40%+ open rates. Purchase intent verified.",
+    title: "AdConfirm for Advertisers — The Highest-Intent B2B Ad Placement",
+    description:
+      "Your ad appears on an invoice — the one document every recipient reads completely. 40%+ open rate. CPM pricing, no minimums.",
   },
 };
 
 export default function ForAdvertisersPage() {
   return (
-    <main className="min-h-screen bg-[#050A14]">
-      <Navigation />
+    <main style={{ background: "var(--bg)", color: "var(--text-1)" }}>
+      <NavigationBar />
       <AdvertiserPageContent />
-      <FinalCTA />
-      <Footer />
+      <FooterBar />
     </main>
   );
 }
