@@ -4,7 +4,7 @@ import cron from "node-cron";
 import { z } from "zod";
 import { logger } from "../modules/logger";
 import { findBusinessByXeroTenantId, db } from "../modules/db";
-import { processReceiptEvent } from "../modules/processor";
+import { processInvoice, type InvoiceData } from "../modules/processor";
 
 const xero = new XeroClient({
   clientId: process.env["XERO_CLIENT_ID"]!,
@@ -16,10 +16,13 @@ const xero = new XeroClient({
     "openid",
     "profile",
     "email",
-    "accounting.transactions.read",
+    "accounting.transactions",
+    "accounting.settings",
     "offline_access",
   ],
 });
+
+export { xero };
 
 const XeroWebhookSchema = z.object({
   events: z.array(
@@ -44,7 +47,7 @@ export async function xeroWebhookHandler(req: Request, res: Response): Promise<v
   }
 
   for (const event of parsed.data.events) {
-    if (event.eventCategory !== "INVOICE" || event.eventType !== "CREATED") {
+    if (event.eventCategory !== "INVOICE" || event.eventType !== "CREATE") {
       continue;
     }
     try {
@@ -58,26 +61,54 @@ export async function xeroWebhookHandler(req: Request, res: Response): Promise<v
   }
 }
 
-async function handleInvoiceCreated(
-  tenantId: string,
-  invoiceId: string
-): Promise<void> {
+type BusinessRow = Awaited<ReturnType<typeof findBusinessByXeroTenantId>>;
+
+async function ensureFreshTokens(business: NonNullable<BusinessRow>): Promise<void> {
+  if (!business.xero_access_token) return;
+
+  const expiryMs = business.xero_token_expiry
+    ? new Date(business.xero_token_expiry).getTime()
+    : 0;
+
+  const FIVE_MINUTES_MS = 5 * 60 * 1000;
+  const needsRefresh = expiryMs < Date.now() + FIVE_MINUTES_MS;
+
+  if (needsRefresh && business.xero_refresh_token) {
+    logger.info({ businessId: business.id }, "proactive token refresh (< 5 min to expiry)");
+    xero.setTokenSet({
+      refresh_token: business.xero_refresh_token,
+      token_type: "Bearer",
+    } as Parameters<typeof xero.setTokenSet>[0]);
+    const refreshed = await xero.refreshToken();
+    await db
+      .from("businesses")
+      .update({
+        xero_access_token: refreshed.access_token,
+        xero_refresh_token: refreshed.refresh_token ?? business.xero_refresh_token,
+        xero_token_expiry: new Date(
+          Date.now() + (refreshed.expires_in ?? 1800) * 1000
+        ).toISOString(),
+      })
+      .eq("id", business.id);
+    return;
+  }
+
+  xero.setTokenSet({
+    access_token: business.xero_access_token,
+    refresh_token: business.xero_refresh_token ?? undefined,
+    token_type: "Bearer",
+    expiry_time: expiryMs ? Math.floor(expiryMs / 1000) : undefined,
+  } as Parameters<typeof xero.setTokenSet>[0]);
+}
+
+async function handleInvoiceCreated(tenantId: string, invoiceId: string): Promise<void> {
   const business = await findBusinessByXeroTenantId(tenantId);
   if (!business) {
     logger.warn({ tenantId }, "no business found for xero tenant");
     return;
   }
 
-  if (business.xero_access_token) {
-    xero.setTokenSet({
-      access_token: business.xero_access_token,
-      refresh_token: business.xero_refresh_token ?? undefined,
-      token_type: "Bearer",
-      expiry_time: business.xero_token_expiry
-        ? Math.floor(new Date(business.xero_token_expiry).getTime() / 1000)
-        : undefined,
-    } as Parameters<typeof xero.setTokenSet>[0]);
-  }
+  await ensureFreshTokens(business);
 
   const invoiceResp = await xero.accountingApi.getInvoice(tenantId, invoiceId);
   const invoice = invoiceResp.body.invoices?.[0];
@@ -86,71 +117,43 @@ async function handleInvoiceCreated(
     return;
   }
 
-  const totalCents = Math.round((invoice.total ?? 0) * 100);
-  const currency = String(invoice.currencyCode ?? "USD");
-  const customerEmail = invoice.contact?.emailAddress ?? null;
-  const issuedAt = invoice.date ? new Date(invoice.date) : new Date();
+  const invoiceData: InvoiceData = {
+    invoiceId,
+    tenantId,
+    invoiceNumber: invoice.invoiceNumber ?? invoiceId,
+    customerEmail: invoice.contact?.emailAddress ?? null,
+    contactName: invoice.contact?.name ?? "Customer",
+    total: invoice.total ?? 0,
+    currency: String(invoice.currencyCode ?? "USD"),
+    date: invoice.date
+      ? new Date(invoice.date).toISOString().split("T")[0]!
+      : new Date().toISOString().split("T")[0]!,
+    lineItems: (invoice.lineItems ?? []).map((li) => ({
+      description: li.description ?? "",
+      quantity: li.quantity ?? 1,
+      unitAmount: li.unitAmount ?? 0,
+      lineAmount: li.lineAmount ?? 0,
+    })),
+  };
 
-  await processReceiptEvent({
-    businessId: business.id,
-    businessIndustries: [],
-    businessRegions: [],
-    externalId: invoiceId,
-    channel: "xero",
-    documentType: "invoice",
-    customerEmail,
-    totalCents,
-    currency,
-    issuedAt,
-    htmlContent: customerEmail ? buildInvoiceHtml(invoice) : undefined,
-  });
+  await processInvoice(business, invoiceData);
 }
 
-function buildInvoiceHtml(invoice: {
-  invoiceNumber?: string;
-  total?: number;
-  currencyCode?: unknown;
-  dueDate?: string;
-}): string {
-  return (
-    `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">` +
-    `<h2>Invoice #${invoice.invoiceNumber ?? ""}</h2>` +
-    `<p>Total: ${String(invoice.currencyCode ?? "USD")} ${invoice.total ?? 0}</p>` +
-    `<p>Due: ${invoice.dueDate ?? "—"}</p>` +
-    `<!-- FISCAL_CLOSE -->` +
-    `</body></html>`
-  );
-}
-
-// Refresh expiring Xero tokens nightly at 2 AM
+// Nightly proactive token refresh at 2 AM for all businesses
 cron.schedule("0 2 * * *", async () => {
-  logger.info("running nightly Xero token refresh");
+  logger.info("nightly Xero token refresh starting");
   const { data: businesses } = await db
     .from("businesses")
-    .select("id, xero_refresh_token, xero_token_expiry")
+    .select("id, xero_refresh_token, xero_token_expiry, xero_access_token")
     .not("xero_refresh_token", "is", null);
 
   for (const biz of businesses ?? []) {
     if (!biz.xero_refresh_token) continue;
     try {
-      xero.setTokenSet({
-        refresh_token: biz.xero_refresh_token,
-        token_type: "Bearer",
-      } as Parameters<typeof xero.setTokenSet>[0]);
-      const refreshed = await xero.refreshToken();
-      await db
-        .from("businesses")
-        .update({
-          xero_access_token: refreshed.access_token,
-          xero_refresh_token: refreshed.refresh_token ?? biz.xero_refresh_token,
-          xero_token_expiry: new Date(
-            Date.now() + (refreshed.expires_in ?? 1800) * 1000
-          ).toISOString(),
-        })
-        .eq("id", biz.id);
-      logger.info({ businessId: biz.id }, "xero token refreshed");
+      await ensureFreshTokens(biz as NonNullable<BusinessRow>);
+      logger.info({ businessId: biz.id }, "nightly token refreshed");
     } catch (err) {
-      logger.error({ err, businessId: biz.id }, "xero token refresh failed");
+      logger.error({ err, businessId: biz.id }, "nightly token refresh failed");
     }
   }
 });
