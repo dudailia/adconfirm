@@ -41,6 +41,10 @@ export function LiveTimestamp({ className, style: styleProp }: { className?: str
         letterSpacing: "0.1em",
         transition: "opacity 0.05s",
         userSelect: "none",
+        // Prevent surrounding layout from reflowing as digits change width
+        display: "inline-block",
+        minWidth: "13ch",
+        fontVariantNumeric: "tabular-nums",
         ...styleProp,
       }}
     />

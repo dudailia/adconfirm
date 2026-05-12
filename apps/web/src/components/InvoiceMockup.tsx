@@ -1,38 +1,52 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import {
-  motion,
-  useMotionValue,
-  useSpring,
-  useTransform,
-} from "framer-motion";
+import { motion } from "framer-motion";
 
 export function InvoiceMockup() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const rawX = useMotionValue(0);
-  const rawY = useMotionValue(0);
-
-  const springCfg = { damping: 30, stiffness: 120, mass: 0.8 };
-  const rotateY = useSpring(useTransform(rawX, [-300, 300], [-5, 5]), springCfg);
-  const rotateX = useSpring(useTransform(rawY, [-300, 300], [5, -5]), springCfg);
-  const translateX = useSpring(useTransform(rawX, [-300, 300], [-8, 8]), springCfg);
+  // Parallax wrapper — pure DOM RAF, zero React re-renders
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const el = wrapperRef.current;
+    if (!el) return;
     if (window.matchMedia("(pointer: coarse)").matches) return;
-    const handleMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      const r = containerRef.current.getBoundingClientRect();
-      rawX.set(e.clientX - (r.left + r.width / 2));
-      rawY.set(e.clientY - (r.top + r.height / 2));
+
+    let rafId: number;
+    let targetRotX = 0, targetRotY = 0;
+    let currentRotX = 0, currentRotY = 0;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const nx = (e.clientX - cx) / (rect.width / 2);
+      const ny = (e.clientY - cy) / (rect.height / 2);
+      targetRotY = nx * 8;
+      targetRotX = -ny * 5;
     };
-    window.addEventListener("mousemove", handleMove, { passive: true });
-    return () => window.removeEventListener("mousemove", handleMove);
-  }, [rawX, rawY]);
+
+    const tick = () => {
+      currentRotX += (targetRotX - currentRotX) * 0.08;
+      currentRotY += (targetRotY - currentRotY) * 0.08;
+      el.style.transform = `perspective(1000px) rotateX(${currentRotX}deg) rotateY(${currentRotY}deg)`;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener("mousemove", onMouseMove);
+    };
+  }, []);
 
   return (
-    <div ref={containerRef} style={{ perspective: "1200px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div
+      className="invoice-mockup"
+      style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
       {/* Ambient glow */}
       <div
         style={{
@@ -46,13 +60,14 @@ export function InvoiceMockup() {
         }}
       />
 
-      {/* Mount animation + parallax */}
-      <motion.div
-        initial={{ opacity: 0, y: 60 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", damping: 20, stiffness: 80 }}
-        style={{ rotateX, rotateY, x: translateX, transformStyle: "preserve-3d" }}
-      >
+      {/* Pure DOM parallax wrapper — perspective applied here by RAF */}
+      <div ref={wrapperRef} style={{ willChange: "transform" }}>
+        {/* Mount animation — runs once, fine to keep in Framer Motion */}
+        <motion.div
+          initial={{ opacity: 0, y: 60 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", damping: 20, stiffness: 80 }}
+        >
         {/* Float loop */}
         <motion.div
           animate={{ y: [0, -8, 0] }}
@@ -242,5 +257,6 @@ export function InvoiceMockup() {
         </motion.div>
       </motion.div>
     </div>
+  </div>
   );
 }

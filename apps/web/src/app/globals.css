@@ -60,5 +60,30 @@ html.lenis { height: auto; }
 
 /* Base */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { background: var(--bg); color: var(--text-1); scroll-behavior: smooth; }
+
+/* scroll-behavior: auto — Lenis owns smooth scrolling; CSS smooth + Lenis = double-smoothing */
+html { background: var(--bg); color: var(--text-1); scroll-behavior: auto; }
 body { font-family: var(--font-sans), system-ui, sans-serif; background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+/* Prefer speed everywhere, legibility only where it matters */
+* { text-rendering: optimizeSpeed; }
+h1, h2, h3 { text-rendering: optimizeLegibility; }
+
+/* GPU-composite the invoice mockup — isolates its transforms from page layout */
+.invoice-mockup {
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Ticker marquee — strict containment, compositor-only layer */
+.ticker-track {
+  will-change: transform;
+  contain: strict;
+}
+
+/* Native scroll-linked animations (progressive enhancement) */
+@supports (animation-timeline: scroll()) {
+  .scroll-linked {
+    animation-timeline: scroll();
+  }
+}
