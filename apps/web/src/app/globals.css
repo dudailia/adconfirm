@@ -23,7 +23,7 @@
 html { background: var(--bg); color: var(--text-1); }
 body { font-family: var(--font-sans), system-ui, sans-serif; background: var(--bg); -webkit-font-smoothing: antialiased; }
 
-/* Noise grain overlay — GPU-composited, never repaints */
+/* Noise grain — GPU layer, never triggers repaint */
 body::before {
   content: '';
   position: fixed;
@@ -44,88 +44,101 @@ body::before {
 /* Selection */
 ::selection { background: var(--accent); color: #ffffff; }
 
-/* Text rendering — speed everywhere, legibility only on headings */
+/* Text rendering */
 * { text-rendering: optimizeSpeed; }
 h1, h2, h3 { text-rendering: optimizeLegibility; }
 
-/* GPU containment */
+/* GPU containment for animated elements */
 .invoice-mockup { will-change: transform; contain: layout style; }
 .ticker-track { will-change: transform; contain: strict; }
 
-/* ─── MOBILE RESPONSIVE OVERRIDES ─────────────────────────────────────── */
+/* ─── HERO LAYOUT ─────────────────────────────────────────────────────── */
 
-/* Hero: stack vertically on mobile */
+/* Desktop: two-column grid (text left, mockup right) */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 55fr 45fr;
+  gap: 64px;
+  align-items: center;
+}
+
+/* Tablet: stack text above, mockup below — scaled to fit */
 @media (max-width: 1023px) {
   .hero-grid {
     grid-template-columns: 1fr !important;
+    gap: 40px !important;
   }
+
+  /* Scale the mockup down so it fits mobile screen width */
   .hero-mockup-col {
-    display: none !important; /* hide invoice mockup on mobile — too heavy */
+    display: flex !important;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .hero-mockup-col > * {
+    transform: scale(0.72);
+    transform-origin: top center;
+    /* Collapse the height so the scaled element doesn't leave a gap */
+    margin-bottom: -100px;
   }
 }
 
-/* Two-column layouts → single column on mobile */
-@media (max-width: 767px) {
-  .two-col-grid,
-  .how-it-works-grid,
-  .timestamp-grid,
-  .businesses-grid,
-  .advertisers-grid,
-  .pricing-grid {
-    grid-template-columns: 1fr !important;
-    gap: 32px !important;
-  }
-
-  /* How it works — 3 cards → single column */
-  .hiw-cards {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Pricing cards */
-  .pricing-cards {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* Comparison table — allow horizontal scroll */
-  .comparison-table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Ticker — reduce font on mobile */
-  .ticker-inner span {
-    font-size: 11px !important;
-    padding: 0 20px !important;
-  }
-
-  /* Reduce section padding on mobile */
-  section {
-    padding-top: 64px !important;
-    padding-bottom: 64px !important;
-  }
-
-  /* Hero heading smaller on mobile */
-  .hero-h1 {
-    font-size: clamp(36px, 10vw, 56px) !important;
-  }
-
-  /* Stat cards — 2 columns on mobile */
-  .stat-cards-grid {
-    grid-template-columns: 1fr 1fr !important;
+@media (max-width: 480px) {
+  .hero-mockup-col > * {
+    transform: scale(0.58);
+    margin-bottom: -160px;
   }
 }
 
-/* Timestamp section on mobile */
+/* ─── SECTION LAYOUTS ─────────────────────────────────────────────────── */
+
+/* Two-column sections → single column on tablet/mobile */
 @media (max-width: 1023px) {
+  .businesses-grid,
   .timestamp-section-grid {
     grid-template-columns: 1fr !important;
     gap: 40px !important;
   }
 }
 
-/* Navigation mobile padding */
+/* Three-column → single column on mobile */
 @media (max-width: 767px) {
-  .nav-inner {
-    padding: 0 16px !important;
+  .hiw-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Pricing: two cards stack */
+  .pricing-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Advertiser 3-col stats */
+  .advertiser-stats {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* For Advertisers two-col layout */
+  .advertisers-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  /* Reduce section vertical padding on mobile */
+  section {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+
+  /* Ticker text slightly smaller */
+  .ticker-inner span {
+    font-size: 11px !important;
+    padding: 0 20px !important;
+  }
+
+  /* Comparison table: horizontal scroll on mobile */
+  .comparison-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }

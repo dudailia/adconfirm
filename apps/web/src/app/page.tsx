@@ -186,12 +186,8 @@ export default function HomePage() {
             width: "100%",
             maxWidth: 1280,
             margin: "0 auto",
-            display: "grid",
-            gridTemplateColumns: "55fr 45fr",
-            gap: 64,
-            alignItems: "center",
           }}
-          className="hero-grid grid-cols-1 lg:grid-cols-[55fr_45fr]"
+          className="hero-grid"
         >
           {/* LEFT */}
           <div>
@@ -359,10 +355,10 @@ export default function HomePage() {
             </motion.div>
           </div>
 
-          {/* RIGHT — Invoice mockup */}
+          {/* RIGHT — Invoice mockup (desktop: beside text; mobile: below, scaled) */}
           <div
             style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-            className="hero-mockup-col hidden lg:flex"
+            className="hero-mockup-col flex justify-center"
           >
             <InvoiceMockup />
           </div>

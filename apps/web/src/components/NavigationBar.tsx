@@ -7,16 +7,15 @@ import { Menu, X } from "lucide-react";
 import { GlowButton } from "./ui/GlowButton";
 
 const NAV_LINKS = [
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "For Businesses", href: "#for-businesses" },
-  { label: "For Advertisers", href: "#for-advertisers" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "How It Works", href: "/#how-it-works" },
+  { label: "For Businesses", href: "/for-businesses" },
+  { label: "For Advertisers", href: "/for-advertisers" },
+  { label: "Pricing", href: "/pricing" },
 ];
 
 export function NavigationBar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -24,20 +23,11 @@ export function NavigationBar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close mobile menu on resize to desktop
   useEffect(() => {
-    const sections = document.querySelectorAll("[data-section]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.getAttribute("data-section") ?? "");
-          }
-        });
-      },
-      { rootMargin: "-40% 0px -40% 0px", threshold: 0 }
-    );
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
+    const onResize = () => { if (window.innerWidth >= 1024) setMobileOpen(false); };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   return (
@@ -53,7 +43,7 @@ export function NavigationBar() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 clamp(20px, 4vw, 48px)",
+          padding: "0 clamp(16px, 3vw, 48px)",
           background: scrolled ? "rgba(4,7,15,0.97)" : "transparent",
           borderBottom: scrolled ? "1px solid var(--border)" : "1px solid transparent",
           transition: "background 0.3s ease, border-color 0.3s ease",
@@ -72,6 +62,7 @@ export function NavigationBar() {
             alignItems: "flex-start",
             gap: 1,
             lineHeight: 1,
+            flexShrink: 0,
           }}
         >
           AdConfirm
@@ -89,50 +80,39 @@ export function NavigationBar() {
           </sup>
         </Link>
 
-        {/* Desktop nav links */}
+        {/* Desktop nav links — only at lg (1024px+) to prevent crowding */}
         <nav
-          style={{ display: "flex", gap: 28, alignItems: "center" }}
-          className="hidden md:flex"
+          style={{
+            display: "flex",
+            gap: 24,
+            alignItems: "center",
+          }}
+          className="hidden lg:flex"
         >
-          {NAV_LINKS.map((link) => {
-            const sectionId = link.href.slice(1);
-            const isActive = activeSection === sectionId;
-            return (
-              <a
-                key={link.href}
-                href={link.href}
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 14,
-                  color: isActive ? "var(--text-1)" : "var(--text-2)",
-                  textDecoration: "none",
-                  transition: "color 0.2s ease",
-                  position: "relative",
-                }}
-              >
-                {link.label}
-                {isActive && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      bottom: -2,
-                      left: 0,
-                      right: 0,
-                      height: 1,
-                      background: "var(--accent)",
-                      borderRadius: 1,
-                    }}
-                  />
-                )}
-              </a>
-            );
-          })}
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: 14,
+                color: "var(--text-2)",
+                textDecoration: "none",
+                transition: "color 0.2s ease",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "var(--text-1)")}
+              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "var(--text-2)")}
+            >
+              {link.label}
+            </Link>
+          ))}
         </nav>
 
-        {/* Desktop right actions */}
+        {/* Desktop CTA — lg+ only */}
         <div
-          style={{ display: "flex", gap: 10, alignItems: "center" }}
-          className="hidden md:flex"
+          style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}
+          className="hidden lg:flex"
         >
           <Link
             href="/login"
@@ -145,25 +125,27 @@ export function NavigationBar() {
               border: "1px solid var(--border)",
               borderRadius: 6,
               transition: "color 0.2s ease, border-color 0.2s ease",
+              whiteSpace: "nowrap",
             }}
           >
             Log In
           </Link>
-          <GlowButton href="http://localhost:4000/auth/xero/connect" variant="primary">
-            Connect Xero →
+          <GlowButton href="/for-businesses" variant="primary">
+            Get Started →
           </GlowButton>
         </div>
 
-        {/* Mobile hamburger */}
+        {/* Hamburger — visible below lg */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="flex md:hidden"
+          className="flex lg:hidden"
           style={{
             background: "none",
             border: "none",
             color: "var(--text-1)",
             cursor: "pointer",
-            padding: 4,
+            padding: 8,
+            flexShrink: 0,
           }}
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
         >
@@ -171,56 +153,57 @@ export function NavigationBar() {
         </button>
       </header>
 
-      {/* Mobile fullscreen overlay */}
+      {/* Full-screen mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
             style={{
               position: "fixed",
               inset: 0,
               zIndex: 99,
-              background: "rgba(4,7,15,0.97)",
+              background: "rgba(4,7,15,0.98)",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              gap: 32,
+              gap: 36,
             }}
           >
             {NAV_LINKS.map((link, i) => (
-              <motion.a
+              <motion.div
                 key={link.href}
-                href={link.href}
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06, duration: 0.3 }}
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: 36,
-                  fontStyle: "italic",
-                  color: "var(--text-1)",
-                  textDecoration: "none",
-                  lineHeight: 1,
-                }}
+                transition={{ delay: i * 0.06, duration: 0.25 }}
               >
-                {link.label}
-              </motion.a>
+                <Link
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "clamp(28px, 8vw, 42px)",
+                    fontStyle: "italic",
+                    color: "var(--text-1)",
+                    textDecoration: "none",
+                    display: "block",
+                    textAlign: "center",
+                  }}
+                >
+                  {link.label}
+                </Link>
+              </motion.div>
             ))}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.28 }}
             >
-              <GlowButton
-                href="http://localhost:4000/auth/xero/connect"
-                variant="primary"
-              >
-                Connect Xero →
+              <GlowButton href="/for-businesses" variant="primary">
+                Get Started →
               </GlowButton>
             </motion.div>
           </motion.div>
