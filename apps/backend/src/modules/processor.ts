@@ -1,4 +1,4 @@
-import type { Database } from "@adconfirm/db";
+import type { Database } from "../../../../packages/db/dist/index";
 import { logger } from "./logger";
 import { selectAd } from "./adEngine";
 import { sendAdReceipt, sendInvoiceWithAd } from "./mailer";

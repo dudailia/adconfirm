@@ -8,7 +8,7 @@ vi.mock("../modules/logger", () => ({
 }));
 
 import { buildReceiptHtml } from "../modules/mailer";
-import type { Database } from "@adconfirm/db";
+import type { Database } from "../../../../packages/db/dist/index";
 
 type AdCreativeRow = Database["public"]["Tables"]["ad_creatives"]["Row"];
 
