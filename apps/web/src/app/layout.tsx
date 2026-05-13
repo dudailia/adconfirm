@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Playfair_Display, Hanken_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { LenisProvider } from "../components/providers/LenisProvider";
-import { CustomCursor } from "../components/ui/CustomCursor";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -81,7 +80,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <LenisProvider>
-          <CustomCursor />
           {children}
           <Analytics />
         </LenisProvider>

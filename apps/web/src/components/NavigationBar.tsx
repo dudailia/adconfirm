@@ -54,11 +54,9 @@ export function NavigationBar() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 clamp(20px, 4vw, 48px)",
-          background: scrolled ? "rgba(4,7,15,0.88)" : "transparent",
-          backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
-          WebkitBackdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
+          background: scrolled ? "rgba(4,7,15,0.97)" : "transparent",
           borderBottom: scrolled ? "1px solid var(--border)" : "1px solid transparent",
-          transition: "background 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease",
+          transition: "background 0.3s ease, border-color 0.3s ease",
         }}
       >
         {/* Logo */}

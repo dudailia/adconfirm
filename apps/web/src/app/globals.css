@@ -18,7 +18,12 @@
   --danger:      #FF3B5C;
 }
 
-/* Noise texture grain overlay */
+/* Base */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); color: var(--text-1); }
+body { font-family: var(--font-sans), system-ui, sans-serif; background: var(--bg); -webkit-font-smoothing: antialiased; }
+
+/* Noise grain overlay — GPU-composited, never repaints */
 body::before {
   content: '';
   position: fixed;
@@ -31,59 +36,96 @@ body::before {
   background-size: 300px 300px;
 }
 
-/* Lenis smooth scroll classes */
-html.lenis { height: auto; }
-.lenis.lenis-smooth { scroll-behavior: auto !important; }
-.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
-
-/* Hide default cursor on pointer (mouse) devices — custom cursor handles it */
-@media (pointer: fine) {
-  * { cursor: none !important; }
-}
-
-/* Touch devices: hide custom cursor elements, restore native cursor */
-@media (pointer: coarse) {
-  [aria-hidden="true"] { display: none !important; }
-  * { cursor: auto !important; }
-}
-
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg-3); }
 ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
 
 /* Selection */
-::selection {
-  background: var(--accent);
-  color: #ffffff;
-}
+::selection { background: var(--accent); color: #ffffff; }
 
-/* Base */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-/* scroll-behavior: auto — Lenis owns smooth scrolling; CSS smooth + Lenis = double-smoothing */
-html { background: var(--bg); color: var(--text-1); scroll-behavior: auto; }
-body { font-family: var(--font-sans), system-ui, sans-serif; background: var(--bg); -webkit-font-smoothing: antialiased; }
-
-/* Prefer speed everywhere, legibility only where it matters */
+/* Text rendering — speed everywhere, legibility only on headings */
 * { text-rendering: optimizeSpeed; }
 h1, h2, h3 { text-rendering: optimizeLegibility; }
 
-/* GPU-composite the invoice mockup — isolates its transforms from page layout */
-.invoice-mockup {
-  will-change: transform;
-  contain: layout style;
+/* GPU containment */
+.invoice-mockup { will-change: transform; contain: layout style; }
+.ticker-track { will-change: transform; contain: strict; }
+
+/* ─── MOBILE RESPONSIVE OVERRIDES ─────────────────────────────────────── */
+
+/* Hero: stack vertically on mobile */
+@media (max-width: 1023px) {
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .hero-mockup-col {
+    display: none !important; /* hide invoice mockup on mobile — too heavy */
+  }
 }
 
-/* Ticker marquee — strict containment, compositor-only layer */
-.ticker-track {
-  will-change: transform;
-  contain: strict;
+/* Two-column layouts → single column on mobile */
+@media (max-width: 767px) {
+  .two-col-grid,
+  .how-it-works-grid,
+  .timestamp-grid,
+  .businesses-grid,
+  .advertisers-grid,
+  .pricing-grid {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+
+  /* How it works — 3 cards → single column */
+  .hiw-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Pricing cards */
+  .pricing-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Comparison table — allow horizontal scroll */
+  .comparison-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ticker — reduce font on mobile */
+  .ticker-inner span {
+    font-size: 11px !important;
+    padding: 0 20px !important;
+  }
+
+  /* Reduce section padding on mobile */
+  section {
+    padding-top: 64px !important;
+    padding-bottom: 64px !important;
+  }
+
+  /* Hero heading smaller on mobile */
+  .hero-h1 {
+    font-size: clamp(36px, 10vw, 56px) !important;
+  }
+
+  /* Stat cards — 2 columns on mobile */
+  .stat-cards-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
 }
 
-/* Native scroll-linked animations (progressive enhancement) */
-@supports (animation-timeline: scroll()) {
-  .scroll-linked {
-    animation-timeline: scroll();
+/* Timestamp section on mobile */
+@media (max-width: 1023px) {
+  .timestamp-section-grid {
+    grid-template-columns: 1fr !important;
+    gap: 40px !important;
+  }
+}
+
+/* Navigation mobile padding */
+@media (max-width: 767px) {
+  .nav-inner {
+    padding: 0 16px !important;
   }
 }

@@ -191,7 +191,7 @@ export default function HomePage() {
             gap: 64,
             alignItems: "center",
           }}
-          className="grid-cols-1 lg:grid-cols-[55fr_45fr]"
+          className="hero-grid grid-cols-1 lg:grid-cols-[55fr_45fr]"
         >
           {/* LEFT */}
           <div>
@@ -362,7 +362,7 @@ export default function HomePage() {
           {/* RIGHT — Invoice mockup */}
           <div
             style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-            className="hidden lg:flex"
+            className="hero-mockup-col hidden lg:flex"
           >
             <InvoiceMockup />
           </div>
@@ -421,7 +421,7 @@ export default function HomePage() {
               gridTemplateColumns: "repeat(3, 1fr)",
               gap: 24,
             }}
-            className="grid grid-cols-1 lg:grid-cols-3"
+            className="hiw-cards grid grid-cols-1 lg:grid-cols-3"
           >
             {/* Card 1 */}
             <motion.div
@@ -664,7 +664,7 @@ export default function HomePage() {
             gap: 80,
             alignItems: "center",
           }}
-          className="grid grid-cols-1 lg:grid-cols-2"
+          className="businesses-grid grid grid-cols-1 lg:grid-cols-2"
         >
           {/* Left */}
           <SectionReveal>
@@ -795,7 +795,7 @@ export default function HomePage() {
             gap: 80,
             alignItems: "start",
           }}
-          className="grid grid-cols-1 lg:grid-cols-2"
+          className="timestamp-section-grid grid grid-cols-1 lg:grid-cols-2"
         >
           {/* Left — Calculator */}
           <EarningsCalculator />
@@ -1100,7 +1100,7 @@ export default function HomePage() {
               maxWidth: 900,
               margin: "0 auto",
             }}
-            className="grid grid-cols-1 lg:grid-cols-2"
+            className="pricing-cards grid grid-cols-1 lg:grid-cols-2"
           >
             {/* Business card */}
             <motion.div
