@@ -55,7 +55,7 @@ router.get(
       }
 
       const callbackUrl = req.protocol + "://" + req.get("host") + req.originalUrl;
-      const tokenSet = await xero.apiCallback(callbackUrl);
+      const tokenSet = await xero.apiCallback(callbackUrl, { checks: { state: state } });
 
       await xero.updateTenants();
       const tenant = xero.tenants[0];
