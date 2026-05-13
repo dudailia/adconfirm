@@ -1,28 +1,61 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { InvoiceMockup } from "../InvoiceMockup";
 import { XERO_CONNECT_URL } from '../../lib/config';
 
-const HEADLINE = "Your invoices.\nNow generating revenue.";
+const LINES = ["Your invoices.", "Now generating", "revenue."];
 
+// Zero React re-renders — writes directly to DOM nodes every 60ms
 function TypewriterHeadline() {
-  const [displayed, setDisplayed] = useState(0);
+  const line1 = useRef<HTMLSpanElement>(null);
+  const line2 = useRef<HTMLSpanElement>(null);
+  const line3 = useRef<HTMLSpanElement>(null);
+  const cursor = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (displayed < HEADLINE.length) {
-      const t = setTimeout(() => setDisplayed((n) => n + 1), 60);
-      return () => clearTimeout(t);
-    }
-  }, [displayed]);
+    const refs = [line1, line2, line3];
+    let lineIdx = 0;
+    let charIdx = 0;
+
+    const tick = setInterval(() => {
+      const line = LINES[lineIdx];
+      if (!line) { clearInterval(tick); cursor.current && (cursor.current.style.display = "none"); return; }
+
+      charIdx++;
+      const ref = refs[lineIdx];
+      if (ref?.current) ref.current.textContent = line.slice(0, charIdx);
+
+      if (charIdx >= line.length) {
+        lineIdx++;
+        charIdx = 0;
+      }
+    }, 60);
+
+    return () => clearInterval(tick);
+  }, []);
 
   return (
-    <h1 className="font-serif text-5xl md:text-[72px] lg:text-[80px] leading-[1.05] text-white whitespace-pre-line">
-      {HEADLINE.slice(0, displayed)}
-      {displayed < HEADLINE.length && (
-        <span className="animate-pulse text-[#0066FF]">|</span>
-      )}
+    <h1
+      style={{
+        fontFamily: "var(--font-display)",
+        fontSize: "clamp(48px, 6vw, 80px)",
+        lineHeight: 1.05,
+      }}
+    >
+      <span ref={line1} style={{ display: "block", color: "var(--text-1)", fontStyle: "italic" }} />
+      <span ref={line2} style={{ display: "block", color: "var(--text-1)" }} />
+      <span
+        ref={line3}
+        style={{ display: "block", color: "var(--gold)", fontStyle: "italic" }}
+      />
+      <span
+        ref={cursor}
+        style={{ color: "var(--accent)", animation: "pulse 1s step-end infinite" }}
+      >
+        |
+      </span>
     </h1>
   );
 }

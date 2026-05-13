@@ -68,11 +68,8 @@ export function InvoiceMockup() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", damping: 20, stiffness: 80 }}
         >
-        {/* Float loop */}
-        <motion.div
-          animate={{ y: [0, -8, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        >
+        {/* Float — CSS animation runs at native screen Hz (120fps), no JS overhead */}
+        <div className="animate-float">
           {/* Slight tilt wrapper */}
           <div style={{ transform: "rotate(2deg)" }}>
             <div
@@ -254,7 +251,7 @@ export function InvoiceMockup() {
               </motion.div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </motion.div>
     </div>
   </div>
