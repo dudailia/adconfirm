@@ -4,7 +4,6 @@ import { xero } from "../adapters/xero";
 import { db } from "../modules/db";
 import { logger } from "../modules/logger";
 const router = Router();
-
 router.get(
   "/xero/connect",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -25,7 +24,6 @@ router.get(
     }
   }
 );
-
 router.get(
   "/xero/callback",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -44,7 +42,7 @@ router.get(
         res.status(400).json({ error: "invalid state param", code: "INVALID_STATE" });
         return;
       }
-      const callbackUrl = "https://adconfirm-api.onrender.com/auth/xero/callback";
+      const callbackUrl = "https://adconfirm-api.onrender.com" + req.originalUrl;
       const tokenSet = await xero.apiCallback(callbackUrl);
       await xero.updateTenants();
       const tenant = xero.tenants[0];
@@ -71,5 +69,4 @@ router.get(
     }
   }
 );
-
 export default router;
