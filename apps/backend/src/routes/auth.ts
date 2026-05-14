@@ -79,7 +79,7 @@ router.get(
         res.status(400).json({ error: "no Xero organisation connected", code: "NO_TENANT" });
         return;
       }
-      await db
+      const { data: updateData, error: updateError } = await db
         .from("businesses")
         .update({
           xero_tenant_id: tenant.tenantId,
@@ -89,7 +89,14 @@ router.get(
             ? new Date(Date.now() + tokenSet.expires_in * 1000).toISOString()
             : null,
         })
-        .eq("id", businessId);
+        .eq("id", businessId)
+        .select();
+
+      if (updateError) {
+        logger.error({ updateError, businessId }, "SUPABASE UPDATE FAILED");
+      } else {
+        logger.info({ updateData, businessId }, "SUPABASE UPDATE SUCCESS");
+      }
       logger.info({ businessId, tenantId: tenant.tenantId }, "Xero OAuth2 connected");
       const dashboardUrl = process.env["DASHBOARD_URL"] ?? "http://localhost:3001";
       res.redirect(`${dashboardUrl}/settings?xero=connected`);
