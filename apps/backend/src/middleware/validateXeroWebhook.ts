@@ -35,14 +35,21 @@ export function validateXeroWebhook(
 
   const body = req.body as Buffer;
 
-  if (!Buffer.isBuffer(body) || body.length === 0) {
-    res.status(400).json({ error: "Empty body", code: "EMPTY_BODY" });
+  if (!Buffer.isBuffer(body)) {
+    res.status(400).json({ error: "Invalid body", code: "INVALID_BODY" });
     return;
   }
 
   if (!verifyXeroSignature(body, signature, key)) {
     logger.warn({ ip: req.ip }, "xero webhook invalid signature");
     res.status(401).json({ error: "Invalid signature", code: "INVALID_SIGNATURE" });
+    return;
+  }
+
+  // Intent to Receive uses an empty body; HMAC is still computed over zero bytes.
+  if (body.length === 0) {
+    req.body = { events: [] };
+    next();
     return;
   }
 

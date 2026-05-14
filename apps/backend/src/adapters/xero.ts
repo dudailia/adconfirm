@@ -77,32 +77,33 @@ async function ensureFreshTokens(business: NonNullable<BusinessRow>): Promise<vo
   const FIVE_MINUTES_MS = 5 * 60 * 1000;
   const needsRefresh = expiryMs < Date.now() + FIVE_MINUTES_MS;
 
-  if (needsRefresh && business.xero_refresh_token) {
-    logger.info({ businessId: business.id }, "proactive token refresh (< 5 min to expiry)");
-    xero.setTokenSet({
-      refresh_token: business.xero_refresh_token,
-      token_type: "Bearer",
-    } as Parameters<typeof xero.setTokenSet>[0]);
-    const refreshed = await xero.refreshToken();
-    await db
-      .from("businesses")
-      .update({
-        xero_access_token: refreshed.access_token,
-        xero_refresh_token: refreshed.refresh_token ?? business.xero_refresh_token,
-        xero_token_expiry: new Date(
-          Date.now() + (refreshed.expires_in ?? 1800) * 1000
-        ).toISOString(),
-      })
-      .eq("id", business.id);
-    return;
-  }
-
+  // Hydrate the in-memory singleton from the DB on every request; it does not persist across HTTP handlers.
   xero.setTokenSet({
     access_token: business.xero_access_token,
     refresh_token: business.xero_refresh_token ?? undefined,
     token_type: "Bearer",
     expiry_time: expiryMs ? Math.floor(expiryMs / 1000) : undefined,
   } as Parameters<typeof xero.setTokenSet>[0]);
+
+  if (needsRefresh && business.xero_refresh_token) {
+    logger.info({ businessId: business.id }, "proactive token refresh (< 5 min to expiry)");
+    const refreshed = await xero.refreshToken();
+    const newExpiryMs = Date.now() + (refreshed.expires_in ?? 1800) * 1000;
+    await db
+      .from("businesses")
+      .update({
+        xero_access_token: refreshed.access_token,
+        xero_refresh_token: refreshed.refresh_token ?? business.xero_refresh_token,
+        xero_token_expiry: new Date(newExpiryMs).toISOString(),
+      })
+      .eq("id", business.id);
+    xero.setTokenSet({
+      access_token: refreshed.access_token,
+      refresh_token: refreshed.refresh_token ?? business.xero_refresh_token,
+      token_type: "Bearer",
+      expiry_time: Math.floor(newExpiryMs / 1000),
+    } as Parameters<typeof xero.setTokenSet>[0]);
+  }
 }
 
 async function handleInvoiceCreated(tenantId: string, invoiceId: string): Promise<void> {
