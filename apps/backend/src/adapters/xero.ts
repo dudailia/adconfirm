@@ -21,16 +21,13 @@ type XeroInvoiceDto = {
   InvoiceNumber?: string;
   Contact?: {
     EmailAddress?: string;
-    emailAddress?: string;
     Name?: string;
-    name?: string;
   };
   Total?: number;
   CurrencyCode?: string;
   Date?: string;
   LineItems?: Array<{
     Description?: string;
-    description?: string;
     Quantity?: number;
     UnitAmount?: number;
     LineAmount?: number;
@@ -172,14 +169,27 @@ async function fetchXeroInvoice(
   return { status: invoiceResp.status, invoice };
 }
 
+function parseXeroDate(dateStr: unknown): string {
+  if (!dateStr) return new Date().toISOString().split("T")[0]!;
+  // Handle Xero's /Date(timestamp)/ format
+  const match = String(dateStr).match(/\/Date\((\d+)/);
+  if (match) {
+    return new Date(parseInt(match[1]!, 10)).toISOString().split("T")[0]!;
+  }
+  // Try regular date string
+  const d = new Date(String(dateStr));
+  if (!isNaN(d.getTime())) return d.toISOString().split("T")[0]!;
+  return new Date().toISOString().split("T")[0]!;
+}
+
 function mapXeroInvoiceToInvoiceData(
   invoice: XeroInvoiceDto,
   invoiceId: string,
   tenantId: string
 ): InvoiceData {
   const contact = invoice.Contact ?? {};
-  const email = contact.EmailAddress ?? contact.emailAddress ?? null;
-  const name = contact.Name ?? contact.name ?? "Customer";
+  const email = contact.EmailAddress ?? null;
+  const name = contact.Name ?? "Customer";
   const lineItems = invoice.LineItems ?? [];
 
   return {
@@ -190,11 +200,9 @@ function mapXeroInvoiceToInvoiceData(
     contactName: name,
     total: invoice.Total ?? 0,
     currency: String(invoice.CurrencyCode ?? "USD"),
-    date: invoice.Date
-      ? new Date(invoice.Date).toISOString().split("T")[0]!
-      : new Date().toISOString().split("T")[0]!,
+    date: parseXeroDate(invoice.Date),
     lineItems: lineItems.map((li) => ({
-      description: li.Description ?? li.description ?? "",
+      description: li.Description ?? "",
       quantity: li.Quantity ?? 1,
       unitAmount: li.UnitAmount ?? 0,
       lineAmount: li.LineAmount ?? 0,
