@@ -162,6 +162,10 @@ export async function processInvoice(
 
   if (invoiceData.customerEmail) {
     await sendInvoiceWithAd(invoiceData, ad.creative, business);
+    logger.info(
+      { businessId: business.id, customerEmail: invoiceData.customerEmail },
+      "ad-injected email sent"
+    );
     await markPlacementDelivered(placement.id);
     logger.info(
       {
@@ -172,6 +176,11 @@ export async function processInvoice(
         injection_unix_ms,
       },
       "processInvoice: complete"
+    );
+  } else {
+    logger.info(
+      { businessId: business.id, invoiceNumber: invoiceData.invoiceNumber },
+      "processInvoice: ad injected but email skipped — no customer email on invoice contact"
     );
   }
 }

@@ -148,6 +148,9 @@ export async function sendInvoiceWithAd(
   creative: AdCreativeRow | null,
   business: BusinessRow
 ): Promise<SendInvoiceResult> {
+  const { customerEmail, invoiceNumber } = invoiceData;
+  logger.info({ customerEmail, invoiceNumber }, "mailer: sending ad-injected invoice");
+
   if (!invoiceData.customerEmail) {
     logger.info({ invoiceId: invoiceData.invoiceId }, "no customer email — skipping send");
     return { placementId: null };
