@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { createApp } from "./app";
 import { logger } from "./modules/logger";
+import { startEposNowPolling } from "./adapters/eposnow";
 
 const PORT = process.env["PORT"] ?? "4000";
 
@@ -18,6 +19,7 @@ const OPTIONAL_ENV = [
   "RESEND_FROM_EMAIL",
   "DASHBOARD_URL",
   "LOG_LEVEL",
+  "EPOSNOW_POLLING_INTERVAL_MS",
 ];
 
 function auditEnv(): void {
@@ -39,4 +41,6 @@ const app = createApp();
 app.listen(Number(PORT), () => {
   logger.info({ port: PORT }, "adconfirm backend listening");
   auditEnv();
+  startEposNowPolling();
+  logger.info("Epos Now polling started");
 });
