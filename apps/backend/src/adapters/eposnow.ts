@@ -4,11 +4,6 @@ import { db } from "../modules/db";
 import { processInvoice, type InvoiceData } from "../modules/processor";
 import type { Database } from "../../../../packages/db/dist/index";
 
-/**
- * Epos Now sales are fed through {@link processInvoice} like Xero invoices.
- * Receipt channel in DB remains whatever {@link processInvoice} uses today ("xero").
- */
-
 type BusinessRow = Database["public"]["Tables"]["businesses"]["Row"];
 
 const EPOS_BASE = "https://api.eposnowhq.com";
@@ -181,7 +176,7 @@ export async function pollEposNowBusiness(business: BusinessRow): Promise<void> 
     const invoiceData = buildInvoiceDataFromTransaction(rawDetail, business);
 
     try {
-      await processInvoice(business, invoiceData);
+      await processInvoice(business, invoiceData, "eposnow");
       logger.info(
         { businessId: business.id, transactionId: id },
         "Epos Now transaction processed via processInvoice"

@@ -7,6 +7,9 @@ import { insertReceipt, insertPlacement, logAdEvent, getBusinessAdSettings, crea
 type Channel = Database["public"]["Tables"]["receipts"]["Row"]["channel"];
 type DocumentType = Database["public"]["Tables"]["receipts"]["Row"]["document_type"];
 
+/** Allowed `channel` when {@link processInvoice} creates a receipt (matches DB check constraint). */
+export type ProcessInvoiceChannel = Channel;
+
 export interface ProcessorInput {
   businessId: string;
   businessIndustries: string[];
@@ -113,7 +116,8 @@ export interface InvoiceData {
 
 export async function processInvoice(
   business: BusinessRow,
-  invoiceData: InvoiceData
+  invoiceData: InvoiceData,
+  channel: ProcessInvoiceChannel = "xero"
 ): Promise<void> {
   // PATENT-CRITICAL: These two lines must execute first, before any async calls
   const injected_at = new Date();
@@ -135,7 +139,7 @@ export async function processInvoice(
   const receipt = await createReceipt(
     business.id,
     invoiceData.invoiceId,
-    "xero",
+    channel,
     "invoice",
     invoiceData.customerEmail,
     totalCents,
