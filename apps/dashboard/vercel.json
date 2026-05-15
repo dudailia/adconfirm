@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "cd ../.. && pnpm turbo build --filter=@adconfirm/dashboard --no-daemon"
+  "buildCommand": "cd ../.. && pnpm --filter @adconfirm/dashboard run build",
+  "outputDirectory": "apps/dashboard/.next",
+  "installCommand": "npm install -g pnpm && pnpm install"
 }
