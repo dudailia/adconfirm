@@ -31,6 +31,19 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  const isAdvertiserProtected =
+    pathname.startsWith("/advertiser/dashboard") || pathname.startsWith("/advertiser/campaigns");
+
+  if (isAdvertiserProtected && !user) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/advertiser/login";
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (pathname === "/advertiser/login" && user) {
+    return NextResponse.redirect(new URL("/advertiser/dashboard", request.url));
+  }
+
   if (pathname.startsWith("/dashboard") && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";

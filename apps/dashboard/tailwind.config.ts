@@ -15,6 +15,7 @@ const config: Config = {
         "muted-fg": "#94a3b8",
         border: "rgba(255,255,255,0.08)",
         success: "#22c55e",
+        warning: "#f59e0b",
         danger: "#ef4444",
       },
       fontFamily: {
