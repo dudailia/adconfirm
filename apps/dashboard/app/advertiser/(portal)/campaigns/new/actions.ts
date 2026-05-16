@@ -4,15 +4,15 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionAndAdvertiser } from "@/lib/advertiser";
 
-export type CampaignActionState = { redirectTo: string } | null;
+export type CampaignActionState = { href: string } | null;
 
 export async function createCampaignAction(
   _prev: CampaignActionState,
   formData: FormData
-): Promise<{ redirectTo: string }> {
+): Promise<{ href: string }> {
   const { user, advertiser } = await getSessionAndAdvertiser();
   if (!user || !advertiser) {
-    return { redirectTo: "/advertiser/login" };
+    return { href: "/advertiser/login" };
   }
 
   const title = String(formData.get("title") ?? "").trim();
@@ -23,12 +23,12 @@ export async function createCampaignAction(
   const regions = formData.getAll("regions").map(String);
 
   if (!title || !Number.isFinite(budgetRaw) || budgetRaw < 0 || !startDate) {
-    return { redirectTo: "/advertiser/campaigns/new?error=invalid" };
+    return { href: "/advertiser/campaigns/new?error=invalid" };
   }
 
   const endDate = endDateRaw.length > 0 ? endDateRaw : null;
   if (endDate && endDate < startDate) {
-    return { redirectTo: "/advertiser/campaigns/new?error=dates" };
+    return { href: "/advertiser/campaigns/new?error=dates" };
   }
 
   const budget_cents = Math.round(budgetRaw * 100);
@@ -50,9 +50,9 @@ export async function createCampaignAction(
     .single();
 
   if (error || !data?.id) {
-    return { redirectTo: "/advertiser/campaigns/new?error=save" };
+    return { href: "/advertiser/campaigns/new?error=save" };
   }
 
   revalidatePath("/advertiser/dashboard");
-  return { redirectTo: `/advertiser/campaigns/${data.id}/creative` };
+  return { href: `/advertiser/campaigns/${data.id}/creative` };
 }

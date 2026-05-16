@@ -9,8 +9,8 @@ export function CreativeForm({ campaignId }: { campaignId: string }) {
   const [state, formAction] = useFormState(createCreativeAction, null as CreativeActionState);
 
   useEffect(() => {
-    if (state?.redirectTo) {
-      window.location.href = state.redirectTo;
+    if (state?.href) {
+      window.location.href = state.href;
     }
   }, [state]);
 

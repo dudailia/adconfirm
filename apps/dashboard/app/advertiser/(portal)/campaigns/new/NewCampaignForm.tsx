@@ -28,8 +28,8 @@ export function NewCampaignForm() {
   const [state, formAction] = useFormState(createCampaignAction, null as CampaignActionState);
 
   useEffect(() => {
-    if (state?.redirectTo) {
-      window.location.href = state.redirectTo;
+    if (state?.href) {
+      window.location.href = state.href;
     }
   }, [state]);
 
