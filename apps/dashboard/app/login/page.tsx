@@ -28,28 +28,10 @@ export default function LoginPage() {
       <div style={{ background: '#0D1629', padding: '40px', borderRadius: '12px', width: '400px', border: '1px solid #1A2540' }}>
         <h1 style={{ color: 'white', marginBottom: '24px', textAlign: 'center' }}>AdConfirm</h1>
         <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            style={{ width: '100%', padding: '12px', marginBottom: '12px', background: '#04070F', border: '1px solid #1A2540', borderRadius: '6px', color: 'white', boxSizing: 'border-box' }}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            style={{ width: '100%', padding: '12px', marginBottom: '12px', background: '#04070F', border: '1px solid #1A2540', borderRadius: '6px', color: 'white', boxSizing: 'border-box' }}
-          />
+          <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', padding: '12px', marginBottom: '12px', background: '#04070F', border: '1px solid #1A2540', borderRadius: '6px', color: 'white', boxSizing: 'border-box' }} />
+          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', padding: '12px', marginBottom: '12px', background: '#04070F', border: '1px solid #1A2540', borderRadius: '6px', color: 'white', boxSizing: 'border-box' }} />
           {error && <p style={{ color: 'red', marginBottom: '12px' }}>{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ width: '100%', padding: '12px', background: '#0052FF', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', fontSize: '16px' }}
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
+          <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: '#0052FF', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', fontSize: '16px' }}>{loading ? 'Signing in...' : 'Sign In'}</button>
         </form>
       </div>
     </div>
