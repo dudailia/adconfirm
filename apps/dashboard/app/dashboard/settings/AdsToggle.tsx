@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { updateAdsEnabled } from "./actions";
 
 export function AdsToggle({ initialEnabled }: { initialEnabled: boolean }) {
-  const [enabled, setEnabled] = useState(initialEnabled);
+  const [enabled, setEnabled] = useState(Boolean(initialEnabled));
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
