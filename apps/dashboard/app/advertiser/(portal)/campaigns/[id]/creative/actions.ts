@@ -1,19 +1,23 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionAndAdvertiser } from "@/lib/advertiser";
 
-export async function createCreativeAction(formData: FormData): Promise<void> {
+export type CreativeActionState = { redirectTo: string } | null;
+
+export async function createCreativeAction(
+  _prev: CreativeActionState,
+  formData: FormData
+): Promise<{ redirectTo: string }> {
   const campaignId = String(formData.get("campaign_id") ?? "").trim();
   if (!campaignId) {
-    redirect("/advertiser/dashboard");
+    return { redirectTo: "/advertiser/dashboard" };
   }
 
   const { user, advertiser } = await getSessionAndAdvertiser();
   if (!user || !advertiser) {
-    redirect("/advertiser/login");
+    return { redirectTo: "/advertiser/login" };
   }
 
   const supabase = createClient();
@@ -24,7 +28,7 @@ export async function createCreativeAction(formData: FormData): Promise<void> {
     .single();
 
   if (campErr || !camp || camp.advertiser_id !== advertiser.id) {
-    redirect("/advertiser/dashboard");
+    return { redirectTo: "/advertiser/dashboard" };
   }
 
   const headline = String(formData.get("headline") ?? "")
@@ -35,7 +39,7 @@ export async function createCreativeAction(formData: FormData): Promise<void> {
   const cta_url = String(formData.get("cta_url") ?? "").trim();
 
   if (!headline || !cta_url) {
-    redirect(`/advertiser/campaigns/${campaignId}/creative?error=invalid`);
+    return { redirectTo: `/advertiser/campaigns/${campaignId}/creative?error=invalid` };
   }
 
   const { error } = await supabase.from("ad_creatives").insert({
@@ -47,10 +51,10 @@ export async function createCreativeAction(formData: FormData): Promise<void> {
   });
 
   if (error) {
-    redirect(`/advertiser/campaigns/${campaignId}/creative?error=save`);
+    return { redirectTo: `/advertiser/campaigns/${campaignId}/creative?error=save` };
   }
 
   revalidatePath("/advertiser/dashboard");
   revalidatePath(`/advertiser/campaigns/${campaignId}`);
-  redirect(`/advertiser/campaigns/${campaignId}`);
+  return { redirectTo: `/advertiser/campaigns/${campaignId}` };
 }

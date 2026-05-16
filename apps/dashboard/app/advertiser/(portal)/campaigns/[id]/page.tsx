@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAdvertiserForUser, getPlacementIdsForCampaign } from "@/lib/advertiser";
 import type { Database } from "@adconfirm/db";
@@ -13,10 +12,28 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/advertiser/login");
+  if (!user) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-8 text-center text-muted-fg">
+        <p>Sign in to view this campaign.</p>
+        <Link href="/advertiser/login" className="mt-4 inline-block text-accent hover:underline">
+          Advertiser login
+        </Link>
+      </div>
+    );
+  }
 
   const advertiser = await getAdvertiserForUser(user);
-  if (!advertiser) redirect("/advertiser/login");
+  if (!advertiser) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-8 text-center text-muted-fg">
+        <p>No advertiser profile for this account.</p>
+        <Link href="/advertiser/login" className="mt-4 inline-block text-accent hover:underline">
+          Advertiser login
+        </Link>
+      </div>
+    );
+  }
 
   const { data: camp, error } = await supabase
     .from("ad_campaigns")
@@ -25,7 +42,14 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     .single();
 
   if (error || !camp || camp.advertiser_id !== advertiser.id) {
-    redirect("/advertiser/dashboard");
+    return (
+      <div className="rounded-lg border border-border bg-surface p-8 text-center text-muted-fg">
+        <p>Campaign not found or you do not have access.</p>
+        <Link href="/advertiser/dashboard" className="mt-4 inline-block text-accent hover:underline">
+          Back to overview
+        </Link>
+      </div>
+    );
   }
 
   const campaign = camp as CampaignRow;

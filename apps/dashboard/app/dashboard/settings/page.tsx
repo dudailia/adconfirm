@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getBusinessForUser } from "@/lib/business";
 import { AdsToggle } from "./AdsToggle";
@@ -10,7 +9,14 @@ export default async function SettingsPage() {
     const { data: authData, error: authErr } = await supabase.auth.getUser();
     const user = authData?.user ?? null;
     if (authErr || !user) {
-      redirect("/login");
+      return (
+        <div className="mx-auto max-w-lg rounded-lg border border-border bg-surface p-8 text-center text-muted-fg">
+          <p>Sign in to manage ad preferences.</p>
+          <Link href="/login" className="mt-4 inline-block text-accent hover:underline">
+            Go to login
+          </Link>
+        </div>
+      );
     }
 
     const business = await getBusinessForUser(user);

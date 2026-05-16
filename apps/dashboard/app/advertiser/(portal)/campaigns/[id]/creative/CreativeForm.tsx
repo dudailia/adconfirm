@@ -1,10 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useFormState } from "react-dom";
 import { InvoiceAdPreview } from "@/lib/invoice-ad-preview";
-import { createCreativeAction } from "./actions";
+import { createCreativeAction, type CreativeActionState } from "./actions";
 
 export function CreativeForm({ campaignId }: { campaignId: string }) {
+  const [state, formAction] = useFormState(createCreativeAction, null as CreativeActionState);
+
+  useEffect(() => {
+    if (state?.redirectTo) {
+      window.location.href = state.redirectTo;
+    }
+  }, [state]);
+
   const [headline, setHeadline] = useState("");
   const [bodyText, setBodyText] = useState("");
   const [ctaText, setCtaText] = useState("Learn More");
@@ -26,7 +35,7 @@ export function CreativeForm({ campaignId }: { campaignId: string }) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-      <form action={createCreativeAction} className="space-y-5 rounded-xl border border-border bg-surface p-6">
+      <form action={formAction} className="space-y-5 rounded-xl border border-border bg-surface p-6">
         <input type="hidden" name="campaign_id" value={campaignId} />
         <div>
           <div className="mb-1 flex justify-between text-sm">

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   getAdvertiserForUser,
@@ -29,7 +28,16 @@ export default async function AdvertiserDashboardPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/advertiser/login");
+  if (!user) {
+    return (
+      <div className="rounded-lg border border-border bg-surface p-8 text-center text-muted-fg">
+        <p>Sign in to view your advertiser dashboard.</p>
+        <Link href="/advertiser/login" className="mt-4 inline-block text-accent hover:underline">
+          Advertiser login
+        </Link>
+      </div>
+    );
+  }
 
   const advertiser = await getAdvertiserForUser(user);
   if (!advertiser) {

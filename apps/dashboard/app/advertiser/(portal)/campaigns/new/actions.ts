@@ -1,14 +1,18 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionAndAdvertiser } from "@/lib/advertiser";
 
-export async function createCampaignAction(formData: FormData): Promise<void> {
+export type CampaignActionState = { redirectTo: string } | null;
+
+export async function createCampaignAction(
+  _prev: CampaignActionState,
+  formData: FormData
+): Promise<{ redirectTo: string }> {
   const { user, advertiser } = await getSessionAndAdvertiser();
   if (!user || !advertiser) {
-    redirect("/advertiser/login");
+    return { redirectTo: "/advertiser/login" };
   }
 
   const title = String(formData.get("title") ?? "").trim();
@@ -19,12 +23,12 @@ export async function createCampaignAction(formData: FormData): Promise<void> {
   const regions = formData.getAll("regions").map(String);
 
   if (!title || !Number.isFinite(budgetRaw) || budgetRaw < 0 || !startDate) {
-    redirect("/advertiser/campaigns/new?error=invalid");
+    return { redirectTo: "/advertiser/campaigns/new?error=invalid" };
   }
 
   const endDate = endDateRaw.length > 0 ? endDateRaw : null;
   if (endDate && endDate < startDate) {
-    redirect("/advertiser/campaigns/new?error=dates");
+    return { redirectTo: "/advertiser/campaigns/new?error=dates" };
   }
 
   const budget_cents = Math.round(budgetRaw * 100);
@@ -46,9 +50,9 @@ export async function createCampaignAction(formData: FormData): Promise<void> {
     .single();
 
   if (error || !data?.id) {
-    redirect("/advertiser/campaigns/new?error=save");
+    return { redirectTo: "/advertiser/campaigns/new?error=save" };
   }
 
   revalidatePath("/advertiser/dashboard");
-  redirect(`/advertiser/campaigns/${data.id}/creative`);
+  return { redirectTo: `/advertiser/campaigns/${data.id}/creative` };
 }
