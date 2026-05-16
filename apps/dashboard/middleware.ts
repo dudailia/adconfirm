@@ -1,7 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -25,33 +24,33 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData?.user ?? null;
 
   const { pathname } = request.nextUrl;
 
-  const isAdvertiserProtected =
-    pathname.startsWith("/advertiser/dashboard") || pathname.startsWith("/advertiser/campaigns");
+  // Protect dashboard routes
+  if (pathname.startsWith("/dashboard") && !user) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
-  if (isAdvertiserProtected && !user) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/advertiser/login";
-    return NextResponse.redirect(loginUrl);
+  // Protect advertiser routes
+  if (
+    pathname.startsWith("/advertiser/dashboard") ||
+    pathname.startsWith("/advertiser/campaigns")
+  ) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/advertiser/login", request.url));
+    }
+  }
+
+  // Redirect authenticated users away from login pages
+  if (pathname === "/login" && user) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (pathname === "/advertiser/login" && user) {
     return NextResponse.redirect(new URL("/advertiser/dashboard", request.url));
-  }
-
-  if (pathname.startsWith("/dashboard") && !user) {
-    const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (pathname === "/login" && user) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return supabaseResponse;
@@ -59,6 +58,10 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/dashboard/:path*",
+    "/advertiser/dashboard/:path*",
+    "/advertiser/campaigns/:path*",
+    "/login",
+    "/advertiser/login",
   ],
 };
