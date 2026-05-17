@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
-  "buildCommand": "rm -rf .next && cd ../.. && pnpm --filter @adconfirm/dashboard run build",
-  "outputDirectory": ".next",
+  "buildCommand": "if [ -f apps/dashboard/package.json ]; then pnpm install && pnpm --filter @adconfirm/db run build && pnpm --filter @adconfirm/dashboard run build; else rm -rf .next && cd ../.. && pnpm install && pnpm --filter @adconfirm/db run build && pnpm --filter @adconfirm/dashboard run build; fi",
+  "outputDirectory": "apps/dashboard/.next",
   "installCommand": "pnpm install --frozen-lockfile",
   "headers": [
     {
