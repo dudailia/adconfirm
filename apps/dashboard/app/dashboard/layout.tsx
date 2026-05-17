@@ -1,3 +1,2 @@
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
-}
+// Layout v3 - NO REDIRECTS NO AUTH
+export default function Layout({children}:{children:React.ReactNode}){return <>{children}</>}
