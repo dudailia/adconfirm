@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "pnpm --filter @adconfirm/db run build && next build && rm -rf apps/dashboard/.next && mkdir -p apps/dashboard && cp -R .next apps/dashboard/.next",
+    "build": "pnpm --filter @adconfirm/db run build && next build && rm -rf ../../.next apps/dashboard/.next && mkdir -p apps/dashboard && cp -R .next ../../.next && cp -R .next apps/dashboard/.next",
     "start": "next start -p 3001",
     "lint": "eslint app lib --ext .ts,.tsx",
     "typecheck": "tsc --noEmit"
