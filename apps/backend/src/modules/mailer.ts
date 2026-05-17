@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import type { Database } from "../../../../packages/db/dist/index";
+import type { Database } from "@adconfirm/db";
 import type { InvoiceData } from "./processor";
 import { logger } from "./logger";
 import { markPlacementDelivered } from "./db";

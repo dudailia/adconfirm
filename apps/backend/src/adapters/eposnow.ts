@@ -1,8 +1,8 @@
-import { getBusinessesWithEposNow } from "../../../../packages/db/dist/index";
+import { getBusinessesWithEposNow } from "@adconfirm/db";
 import { logger } from "../modules/logger";
 import { db } from "../modules/db";
 import { processInvoice, type InvoiceData } from "../modules/processor";
-import type { Database } from "../../../../packages/db/dist/index";
+import type { Database } from "@adconfirm/db";
 
 type BusinessRow = Database["public"]["Tables"]["businesses"]["Row"];
 

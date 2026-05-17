@@ -28,7 +28,6 @@ export function EarningsCalculator() {
   const [sliderVal, setSliderVal] = useState(invoicesToSlider(500));
   const invoices = sliderToInvoices(sliderVal);
   const monthly = invoices * 0.08;
-  const annual = monthly * 12;
 
   const springMonthly = useMotionValue(monthly);
   const smoothMonthly = useSpring(springMonthly, { damping: 15, stiffness: 80 });

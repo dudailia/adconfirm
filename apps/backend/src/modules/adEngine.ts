@@ -1,4 +1,4 @@
-import type { Database } from "../../../../packages/db/dist/index";
+import type { Database } from "@adconfirm/db";
 import { getActiveCampaignsWithCreatives, type CampaignWithCreatives } from "./db";
 import { logger } from "./logger";
 
