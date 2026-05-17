@@ -6,7 +6,7 @@
     "dev": "next dev -p 3001",
     "build": "pnpm --filter @adconfirm/db run build && next build",
     "start": "next start -p 3001",
-    "lint": "next lint",
+    "lint": "eslint app lib --ext .ts,.tsx",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

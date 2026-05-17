@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { GlowButton } from "../../components/ui/GlowButton";
 import { AnimatedCounter } from "../../components/ui/AnimatedCounter";

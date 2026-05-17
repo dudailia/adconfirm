@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
-import { Check, Plug, UserCheck, Shield, BarChart3 } from "lucide-react";
+import { Plug, UserCheck, Shield, BarChart3 } from "lucide-react";
 import { GlowButton } from "../../components/ui/GlowButton";
 import { SectionReveal } from "../../components/ui/SectionReveal";
 

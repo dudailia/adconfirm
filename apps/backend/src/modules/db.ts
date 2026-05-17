@@ -1,5 +1,5 @@
-import { createServerClient } from "../../../../packages/db/dist/index";
-import type { Database } from "../../../../packages/db/dist/index";
+import { createServerClient } from "@adconfirm/db";
+import type { Database } from "@adconfirm/db";
 import { logger } from "./logger";
 
 type BusinessRow = Database["public"]["Tables"]["businesses"]["Row"];

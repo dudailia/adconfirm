@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plug, Zap, TrendingUp, Check, ArrowRight } from "lucide-react";
+import { Plug, Zap, TrendingUp, Check } from "lucide-react";
 import { NavigationBar } from "../components/NavigationBar";
 import dynamic from "next/dynamic";
 const InvoiceMockup = dynamic(
@@ -157,9 +156,6 @@ function CodeBlock() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
   return (
     <main style={{ background: "var(--bg)", color: "var(--text-1)", overflowX: "hidden" }}>
       <NavigationBar />

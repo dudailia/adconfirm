@@ -1,8 +1,5 @@
 "use client";
 
-import { useRef } from "react";
-import { useCountUp } from "../../lib/hooks";
-
 function StatItem({
   valueDisplay,
   label,
@@ -19,15 +16,6 @@ function StatItem({
       </div>
       <div className="text-sm text-[#9AA5B4]">{label}</div>
     </div>
-  );
-}
-
-function CountValue({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
-  const { count, ref } = useCountUp(value, 2000);
-  return (
-    <span ref={ref as React.RefObject<HTMLSpanElement>}>
-      {prefix}{count.toLocaleString()}{suffix}
-    </span>
   );
 }
 
