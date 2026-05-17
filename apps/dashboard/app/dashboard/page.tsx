@@ -1,4 +1,4 @@
-// AdConfirm Dashboard v3 - NO REDIRECTS
+// v3 NO REDIRECTS
 import { createClient } from '../../lib/supabase/server'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
