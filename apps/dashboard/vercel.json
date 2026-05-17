@@ -1,6 +1,26 @@
 {
   "framework": "nextjs",
-  "buildCommand": "cd ../.. && pnpm --filter @adconfirm/dashboard run build",
+  "buildCommand": "rm -rf .next && cd ../.. && pnpm --filter @adconfirm/dashboard run build",
   "outputDirectory": ".next",
-  "installCommand": "pnpm install --frozen-lockfile"
+  "installCommand": "pnpm install --frozen-lockfile",
+  "headers": [
+    {
+      "source": "/login",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    },
+    {
+      "source": "/dashboard",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0"
+        }
+      ]
+    }
+  ]
 }
