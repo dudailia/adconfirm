@@ -1,4 +1,4 @@
-// v3 NO REDIRECTS
+// v4 NO REDIRECTS - 2026-05-17 cache bust
 import { createClient } from '../../lib/supabase/server'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -12,6 +12,7 @@ export default async function DashboardPage() {
   return (
     <div style={{minHeight:'100vh',background:'#04070F',color:'white',padding:'40px',fontFamily:'system-ui'}}>
       <h1 style={{fontSize:'28px',marginBottom:'8px'}}>AdConfirm Dashboard</h1>
+      <p style={{color:'#00E5A0',fontSize:'12px',marginBottom:'8px'}}>v4 no redirects active</p>
       <p style={{color:'#8A9BC4',marginBottom:'40px'}}>Welcome, {email}</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'20px'}}>
         <div style={{background:'#0D1629',padding:'24px',borderRadius:'12px',border:'1px solid #1A2540'}}>
