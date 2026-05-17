@@ -1,35 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "rm -rf .next && cd ../.. && pnpm --filter @adconfirm/dashboard run build",
+  "buildCommand": "cd ../.. && pnpm --filter @adconfirm/db run build && pnpm --filter @adconfirm/dashboard run build",
   "outputDirectory": ".next",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "headers": [
-    {
-      "source": "/",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
-    },
-    {
-      "source": "/login",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
-    },
-    {
-      "source": "/dashboard",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
-    }
-  ]
+  "installCommand": "pnpm install --frozen-lockfile"
 }
