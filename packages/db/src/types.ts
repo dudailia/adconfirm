@@ -83,6 +83,36 @@ export interface Database {
         Relationships: [];
       };
 
+      advertiser_billing_interest: {
+        Row: {
+          id: string;
+          advertiser_id: string;
+          contact_email: string;
+          submitted_at: string;
+        };
+        Insert: {
+          id?: string;
+          advertiser_id: string;
+          contact_email: string;
+          submitted_at?: string;
+        };
+        Update: {
+          id?: string;
+          advertiser_id?: string;
+          contact_email?: string;
+          submitted_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "advertiser_billing_interest_advertiser_id_fkey";
+            columns: ["advertiser_id"];
+            isOneToOne: false;
+            referencedRelation: "advertisers";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+
       ad_campaigns: {
         Row: {
           id: string;
@@ -96,6 +126,7 @@ export interface Database {
           target_industries: string[];
           target_regions: string[];
           created_at: string;
+          daily_budget_cents: number;
         };
         Insert: {
           id?: string;
@@ -109,6 +140,7 @@ export interface Database {
           target_industries?: string[];
           target_regions?: string[];
           created_at?: string;
+          daily_budget_cents?: number;
         };
         Update: {
           id?: string;
@@ -122,6 +154,7 @@ export interface Database {
           target_industries?: string[];
           target_regions?: string[];
           created_at?: string;
+          daily_budget_cents?: number;
         };
         Relationships: [
           {
