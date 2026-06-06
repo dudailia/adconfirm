@@ -2,24 +2,29 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: ["class"],
-  content: ["./app/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
+  content: [
+    "./src/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
-        background: "#04070F",
-        surface: "#0a1020",
-        "surface-2": "#121a2e",
-        accent: "#0052FF",
-        "accent-hover": "#1a66ff",
-        muted: "#1e293b",
-        "muted-fg": "#94a3b8",
+        background: "#050A14",
+        surface: "#0D1629",
+        "surface-2": "#162035",
+        accent: "#0066FF",
+        "accent-dim": "#0052CC",
+        muted: "#1E2D45",
+        "muted-fg": "#9AA5B4",
         border: "rgba(255,255,255,0.08)",
-        success: "#22c55e",
-        warning: "#f59e0b",
-        danger: "#ef4444",
+        success: "#10B981",
+        warning: "#F59E0B",
+        danger: "#EF4444",
       },
       fontFamily: {
         sans: ["system-ui", "sans-serif"],
+        mono: ["'IBM Plex Mono'", "monospace"],
       },
     },
   },
