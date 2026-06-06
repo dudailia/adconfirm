@@ -99,7 +99,7 @@ router.get(
       }
       logger.info({ businessId, tenantId: tenant.tenantId }, "Xero OAuth2 connected");
       const dashboardUrl = process.env["DASHBOARD_URL"] ?? "http://localhost:3001";
-      res.redirect(`${dashboardUrl}/settings?xero=connected`);
+      res.redirect(`${dashboardUrl}/dashboard/connect-xero?status=connected`);
     } catch (err) {
       next(err);
     }
