@@ -4,18 +4,28 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "pnpm --filter @adconfirm/db run build && next build && rm -rf ../../.next apps/dashboard/.next && mkdir -p apps/dashboard && cp -R .next ../../.next && cp -R .next apps/dashboard/.next",
-    "start": "next start -p 3001",
-    "lint": "eslint app lib --ext .ts,.tsx",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@adconfirm/db": "workspace:*",
+    "@adconfirm/ui": "workspace:*",
+    "@hookform/resolvers": "^3.9.0",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.4",
-    "next": "^14.2.16",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.3.21",
+    "lucide-react": "^0.436.0",
+    "next": "14.2.16",
+    "qrcode.react": "^4.0.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.53.0",
+    "react-hot-toast": "^2.4.1",
+    "recharts": "^2.12.7",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@adconfirm/config": "workspace:*",
