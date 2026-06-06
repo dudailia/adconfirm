@@ -4,6 +4,7 @@ import {
   getAdvertiserForUser,
   getPlacementIdsForAdvertiser,
 } from "@/lib/advertiser";
+import { BillingModal } from "./BillingModal";
 import type { Database } from "@adconfirm/db";
 
 type CampaignRow = Database["public"]["Tables"]["ad_campaigns"]["Row"];
@@ -108,12 +109,15 @@ export default async function AdvertiserDashboardPage() {
           <h1 className="text-2xl font-bold text-white">Campaign overview</h1>
           <p className="mt-1 text-sm text-muted-fg">{advertiser.name}</p>
         </div>
-        <Link
-          href="/advertiser/campaigns/new"
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover"
-        >
-          New campaign
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <BillingModal contactEmail={advertiser.email} />
+          <Link
+            href="/advertiser/campaigns/new"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-hover"
+          >
+            New campaign
+          </Link>
+        </div>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
