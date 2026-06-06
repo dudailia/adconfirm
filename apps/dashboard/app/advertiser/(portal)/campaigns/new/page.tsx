@@ -22,9 +22,11 @@ export default function NewCampaignPage({
         <p className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
           {err === "dates"
             ? "End date must be on or after the start date."
-            : err === "save"
-              ? "Could not save campaign. Check permissions and try again."
-              : "Please check all required fields."}
+            : err === "budget"
+              ? "Daily budget must be at least £5/day."
+              : err === "save"
+                ? "Could not save campaign. Check permissions and try again."
+                : "Please check all required fields."}
         </p>
       ) : null}
 

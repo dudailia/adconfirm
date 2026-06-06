@@ -16,14 +16,18 @@ export async function createCampaignAction(
   }
 
   const title = String(formData.get("title") ?? "").trim();
-  const budgetRaw = Number(formData.get("budget_pounds"));
+  const dailyBudgetRaw = Number(formData.get("daily_budget_pounds"));
   const startDate = String(formData.get("start_date") ?? "").trim();
   const endDateRaw = String(formData.get("end_date") ?? "").trim();
   const industries = formData.getAll("industries").map(String);
   const regions = formData.getAll("regions").map(String);
 
-  if (!title || !Number.isFinite(budgetRaw) || budgetRaw < 0 || !startDate) {
+  if (!title || !Number.isFinite(dailyBudgetRaw) || !startDate) {
     return { href: "/advertiser/campaigns/new?error=invalid" };
+  }
+
+  if (dailyBudgetRaw < 5) {
+    return { href: "/advertiser/campaigns/new?error=budget" };
   }
 
   const endDate = endDateRaw.length > 0 ? endDateRaw : null;
@@ -31,7 +35,8 @@ export async function createCampaignAction(
     return { href: "/advertiser/campaigns/new?error=dates" };
   }
 
-  const budget_cents = Math.round(budgetRaw * 100);
+  const daily_budget_cents = Math.round(dailyBudgetRaw * 100);
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from("ad_campaigns")
@@ -39,7 +44,8 @@ export async function createCampaignAction(
       advertiser_id: advertiser.id,
       title,
       status: "draft",
-      budget_cents,
+      budget_cents: daily_budget_cents,
+      daily_budget_cents,
       spent_cents: 0,
       start_date: startDate,
       end_date: endDate,
