@@ -2,6 +2,11 @@
 ALTER TABLE ad_campaigns
   ADD COLUMN IF NOT EXISTS daily_budget_cents integer NOT NULL DEFAULT 0;
 
+-- Allow businesses to insert their own row on signup
+CREATE POLICY "businesses_insert_own"
+  ON businesses FOR INSERT
+  WITH CHECK (id = auth.uid());
+
 -- Allow advertisers to insert their own row on signup
 CREATE POLICY "advertisers_insert_own"
   ON advertisers FOR INSERT
