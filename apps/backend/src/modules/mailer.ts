@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import type { Database } from "@adconfirm/db";
+import type { Database } from "../../../../packages/db/dist/index";
 import type { InvoiceData } from "./processor";
 import { logger } from "./logger";
 import { markPlacementDelivered } from "./db";
@@ -141,6 +141,7 @@ export function buildInvoiceHtml(
 
 export interface SendInvoiceResult {
   placementId: string | null;
+  emailOk: boolean;
 }
 
 export async function sendInvoiceWithAd(
@@ -148,9 +149,6 @@ export async function sendInvoiceWithAd(
   creative: AdCreativeRow | null,
   business: BusinessRow
 ): Promise<SendInvoiceResult> {
-  const { customerEmail, invoiceNumber } = invoiceData;
-  logger.info({ customerEmail, invoiceNumber }, "mailer: sending ad-injected invoice");
-
   if (!invoiceData.customerEmail) {
     logger.info({ invoiceId: invoiceData.invoiceId }, "no customer email — skipping send");
     return { placementId: null };
@@ -176,12 +174,12 @@ export async function sendInvoiceWithAd(
       { err: error, invoiceId: invoiceData.invoiceId, to: invoiceData.customerEmail },
       "sendInvoiceWithAd failed"
     );
-    return { placementId: null };
+    return { placementId: null, emailOk: false };
   }
 
   logger.info(
     { invoiceId: invoiceData.invoiceId, to: invoiceData.customerEmail, hasAd: !!creative },
     "invoice email sent"
   );
-  return { placementId: null };
+  return { placementId: null, emailOk: true };
 }
