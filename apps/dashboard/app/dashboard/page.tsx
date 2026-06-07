@@ -3,7 +3,21 @@ import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage() {
+const API_URL = (process.env['NEXT_PUBLIC_API_URL'] ?? 'https://adconfirm-api.onrender.com').replace(/\/$/, '')
+
+const XERO_ERROR_MESSAGES: Record<string, string> = {
+  access_denied: 'Xero connection was cancelled.',
+  token_failed: 'Xero authorisation failed. Please try again.',
+  no_org: 'No Xero organisation was connected. Select an organisation in Xero and try again.',
+  missing_params: 'Something went wrong with the Xero redirect. Please try again.',
+  invalid_state: 'Invalid Xero session state. Please start the connection again.',
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { connected?: string; xero_error?: string }
+}) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -18,7 +32,7 @@ export default async function DashboardPage() {
     xero_access_token: string | null
   } | null = null
 
-  if (user?.email) {
+  if (user.email) {
     const { data: byEmail } = await supabase
       .from('businesses')
       .select('id, name, email, xero_tenant_id, xero_access_token')
@@ -27,7 +41,7 @@ export default async function DashboardPage() {
     business = byEmail ?? null
   }
 
-  if (!business && user?.id) {
+  if (!business) {
     const { data: byId } = await supabase
       .from('businesses')
       .select('id, name, email, xero_tenant_id, xero_access_token')
@@ -36,12 +50,15 @@ export default async function DashboardPage() {
     business = byId ?? null
   }
 
-  // Xero connected only when both tenant ID and a live access token exist
   const xeroConnected =
     business?.xero_tenant_id != null &&
     business?.xero_access_token != null
 
-  // Receipt count for this business
+  // Build Connect URL using the business's DB id (= auth.uid on signup)
+  const connectXeroUrl = business?.id
+    ? `${API_URL}/auth/xero/connect?business_id=${encodeURIComponent(business.id)}`
+    : null
+
   const { count: receiptCount } = business
     ? await supabase
         .from('receipts')
@@ -49,7 +66,6 @@ export default async function DashboardPage() {
         .eq('business_id', business.id)
     : { count: 0 }
 
-  // Ad placements live on receipts — join through receipt_id
   const { count: adCount } = business
     ? await supabase
         .from('receipt_ad_placements')
@@ -57,7 +73,6 @@ export default async function DashboardPage() {
         .eq('receipts.business_id', business.id)
     : { count: 0 }
 
-  // Last receipt processed by this business
   const { data: lastReceiptRow } = business
     ? await supabase
         .from('receipts')
@@ -75,17 +90,46 @@ export default async function DashboardPage() {
       })
     : null
 
+  const justConnected = searchParams.connected === 'true'
+  const xeroError = searchParams.xero_error
+    ? (XERO_ERROR_MESSAGES[searchParams.xero_error] ?? 'Something went wrong connecting Xero.')
+    : null
+
   return (
     <div style={{minHeight:'100vh',background:'#04070F',color:'white',padding:'40px',fontFamily:'system-ui'}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'40px'}}>
+
+      {/* Header */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'32px'}}>
         <div>
           <h1 style={{fontSize:'28px',marginBottom:'4px',color:'#F0F4FF'}}>AdConfirm Dashboard</h1>
-          <p style={{color:'#8A9BC4',margin:0}}>{business?.name ?? user?.email ?? 'Dashboard'}</p>
+          <p style={{color:'#8A9BC4',margin:0}}>{business?.name ?? user.email}</p>
         </div>
         <a href="/api/auth/signout" style={{padding:'8px 16px',background:'#0D1629',border:'1px solid #1A2540',borderRadius:'6px',color:'white',textDecoration:'none',fontSize:'14px'}}>Sign out</a>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'20px',maxWidth:'900px',marginBottom:'40px'}}>
+      {/* Xero connected success banner */}
+      {justConnected && (
+        <div style={{marginBottom:'24px',padding:'12px 16px',background:'#0D1A0D',border:'1px solid #1A3D1A',borderRadius:'8px',color:'#00E5A0',fontSize:'13px'}}>
+          ✓ Xero connected successfully. Your invoices will now be processed automatically.
+        </div>
+      )}
+
+      {/* Xero error banner */}
+      {xeroError && (
+        <div style={{marginBottom:'24px',padding:'12px 16px',background:'#1A0D0D',border:'1px solid #3D1515',borderRadius:'8px',color:'#FF9090',fontSize:'13px'}}>
+          {xeroError}
+        </div>
+      )}
+
+      {/* No business profile warning */}
+      {!business && (
+        <div style={{marginBottom:'24px',padding:'12px 16px',background:'#1A0D0D',border:'1px solid #3D1515',borderRadius:'8px',color:'#FF9090',fontSize:'13px'}}>
+          No business profile found for <strong>{user.email}</strong>. Contact support if this is unexpected.
+        </div>
+      )}
+
+      {/* Stat cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'20px',maxWidth:'900px',marginBottom:'32px'}}>
         <div style={{background:'#0D1629',padding:'24px',borderRadius:'12px',border:'1px solid #1A2540'}}>
           <p style={{color:'#8A9BC4',fontSize:'14px',marginBottom:'8px'}}>Receipts Processed</p>
           <p style={{fontSize:'32px',fontWeight:'bold',color:'#F0F4FF'}}>{receiptCount ?? 0}</p>
@@ -105,24 +149,43 @@ export default async function DashboardPage() {
             </p>
           )}
           {lastSync && (
-            <p style={{color:'#8A9BC4',fontSize:'11px',marginTop:'4px'}}>
-              Last sync: {lastSync}
-            </p>
+            <p style={{color:'#8A9BC4',fontSize:'11px',marginTop:'4px'}}>Last sync: {lastSync}</p>
           )}
         </div>
       </div>
 
-      {!business && (
-        <div style={{marginBottom:'24px',padding:'12px 16px',background:'#1A0D0D',border:'1px solid #3D1515',borderRadius:'8px',color:'#FF9090',fontSize:'13px'}}>
-          No business profile found for <strong>{user.email}</strong>. Contact support if this is unexpected.
-        </div>
-      )}
-
-      <div>
-        <a href="/dashboard/connect-xero" style={{display:'inline-block',padding:'12px 24px',background:'#0052FF',color:'white',borderRadius:'6px',textDecoration:'none',marginRight:'12px',fontSize:'14px'}}>
-          {xeroConnected ? 'Manage Xero' : 'Connect Xero'}
+      {/* Actions */}
+      <div style={{display:'flex',gap:'12px',flexWrap:'wrap'}}>
+        {!xeroConnected && connectXeroUrl && (
+          <a
+            href={connectXeroUrl}
+            style={{display:'inline-block',padding:'12px 24px',background:'#0052FF',color:'white',borderRadius:'6px',textDecoration:'none',fontSize:'14px',fontWeight:600}}
+          >
+            Connect Xero
+          </a>
+        )}
+        {xeroConnected && (
+          <>
+            <a
+              href="/dashboard/connect-xero"
+              style={{display:'inline-block',padding:'12px 24px',background:'#0D1629',color:'#00E5A0',borderRadius:'6px',textDecoration:'none',fontSize:'14px',border:'1px solid #00E5A0'}}
+            >
+              Xero Connected ✓
+            </a>
+            <a
+              href="/dashboard/connect-xero"
+              style={{display:'inline-block',padding:'12px 24px',background:'#1A0D0D',color:'#FF9090',borderRadius:'6px',textDecoration:'none',fontSize:'14px',border:'1px solid #3D1515'}}
+            >
+              Disconnect Xero
+            </a>
+          </>
+        )}
+        <a
+          href="/dashboard/settings"
+          style={{display:'inline-block',padding:'12px 24px',background:'#0D1629',color:'white',borderRadius:'6px',textDecoration:'none',border:'1px solid #1A2540',fontSize:'14px'}}
+        >
+          Settings
         </a>
-        <a href="/dashboard/settings" style={{display:'inline-block',padding:'12px 24px',background:'#0D1629',color:'white',borderRadius:'6px',textDecoration:'none',border:'1px solid #1A2540',fontSize:'14px'}}>Settings</a>
       </div>
     </div>
   )

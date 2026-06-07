@@ -5,6 +5,12 @@ import { logger } from "../modules/logger";
 
 const router = Router();
 
+function dashboardUrl(): string {
+  return (process.env["DASHBOARD_URL"] ?? "http://localhost:3001").replace(/\/$/, "");
+}
+
+// ─── GET /auth/xero/connect ──────────────────────────────────────────────────
+
 router.get(
   "/xero/connect",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -19,87 +25,143 @@ router.get(
         response_type: "code",
         client_id: process.env["XERO_CLIENT_ID"]!,
         redirect_uri: process.env["XERO_REDIRECT_URI"]!,
-        scope: "openid profile email accounting.invoices accounting.invoices.read accounting.contacts accounting.contacts.read accounting.settings accounting.settings.read offline_access",
-        state: state,
+        scope: [
+          "openid", "profile", "email",
+          "accounting.invoices", "accounting.invoices.read",
+          "accounting.contacts", "accounting.contacts.read",
+          "accounting.settings", "accounting.settings.read",
+          "offline_access",
+        ].join(" "),
+        state,
       });
-      const authUrl = `https://login.xero.com/identity/connect/authorize?${params.toString()}`;
       logger.info({ businessId }, "redirecting to Xero consent URL");
-      res.redirect(authUrl);
+      res.redirect(`https://login.xero.com/identity/connect/authorize?${params}`);
     } catch (err) {
       next(err);
     }
   }
 );
 
+// ─── GET /auth/xero/callback ─────────────────────────────────────────────────
+
 router.get(
   "/xero/callback",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // Xero sends ?error=access_denied when the user cancels
+      if (req.query["error"]) {
+        logger.warn({ xeroError: req.query["error"] }, "Xero OAuth denied by user");
+        return res.redirect(`${dashboardUrl()}/dashboard?xero_error=access_denied`);
+      }
+
       const code = req.query["code"] as string | undefined;
       const stateParam = req.query["state"] as string | undefined;
       if (!stateParam || !code) {
-        res.status(400).json({ error: "missing code or state", code: "MISSING_PARAMS" });
-        return;
+        logger.warn({ query: req.query }, "Xero callback missing code or state");
+        return res.redirect(`${dashboardUrl()}/dashboard?xero_error=missing_params`);
       }
+
       let businessId: string;
       try {
         businessId = (
           JSON.parse(Buffer.from(stateParam, "base64url").toString("utf8")) as { businessId: string }
         ).businessId;
       } catch {
-        res.status(400).json({ error: "invalid state param", code: "INVALID_STATE" });
-        return;
+        logger.warn({ stateParam }, "Xero callback invalid state param");
+        return res.redirect(`${dashboardUrl()}/dashboard?xero_error=invalid_state`);
       }
+
+      // Exchange code for tokens
       const tokenResponse = await fetch("https://identity.xero.com/connect/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          "Authorization": "Basic " + Buffer.from(
-            process.env["XERO_CLIENT_ID"]! + ":" + process.env["XERO_CLIENT_SECRET"]!
-          ).toString("base64"),
+          Authorization:
+            "Basic " +
+            Buffer.from(`${process.env["XERO_CLIENT_ID"]!}:${process.env["XERO_CLIENT_SECRET"]!}`).toString("base64"),
         },
         body: new URLSearchParams({
           grant_type: "authorization_code",
-          code: code,
+          code,
           redirect_uri: process.env["XERO_REDIRECT_URI"]!,
         }).toString(),
       });
-      const tokenSet = await tokenResponse.json() as any;
-      if (!tokenSet.access_token) {
-        logger.error({ tokenSet }, "token exchange failed");
-        res.status(500).json({ error: "token exchange failed", code: "TOKEN_FAILED" });
-        return;
+
+      const tokenSet = (await tokenResponse.json()) as Record<string, unknown>;
+      if (!tokenSet["access_token"]) {
+        logger.error({ tokenSet, businessId }, "Xero token exchange failed");
+        return res.redirect(`${dashboardUrl()}/dashboard?xero_error=token_failed`);
       }
+
+      // Get connected organisations
       const connectionsResponse = await fetch("https://api.xero.com/connections", {
-        headers: { "Authorization": `Bearer ${tokenSet.access_token}` },
+        headers: { Authorization: `Bearer ${String(tokenSet["access_token"])}` },
       });
-      const tenants = await connectionsResponse.json() as any[];
+      const tenants = (await connectionsResponse.json()) as Array<{ tenantId: string; tenantName?: string }>;
       const tenant = tenants[0];
       if (!tenant) {
-        res.status(400).json({ error: "no Xero organisation connected", code: "NO_TENANT" });
-        return;
+        logger.warn({ businessId }, "Xero token exchanged but no org connected");
+        return res.redirect(`${dashboardUrl()}/dashboard?xero_error=no_org`);
       }
-      const { data: updateData, error: updateError } = await db
+
+      // Persist tokens
+      const { error: dbError } = await db
         .from("businesses")
         .update({
           xero_tenant_id: tenant.tenantId,
-          xero_access_token: tokenSet.access_token,
-          xero_refresh_token: tokenSet.refresh_token ?? null,
-          xero_token_expiry: tokenSet.expires_in
-            ? new Date(Date.now() + tokenSet.expires_in * 1000).toISOString()
-            : null,
+          xero_access_token: String(tokenSet["access_token"]),
+          xero_refresh_token:
+            typeof tokenSet["refresh_token"] === "string" ? tokenSet["refresh_token"] : null,
+          xero_token_expiry:
+            typeof tokenSet["expires_in"] === "number"
+              ? new Date(Date.now() + tokenSet["expires_in"] * 1000).toISOString()
+              : null,
         })
-        .eq("id", businessId)
-        .select();
+        .eq("id", businessId);
 
-      if (updateError) {
-        logger.error({ updateError, businessId }, "SUPABASE UPDATE FAILED");
+      if (dbError) {
+        logger.error({ dbError, businessId }, "Supabase update failed after Xero connect");
       } else {
-        logger.info({ updateData, businessId }, "SUPABASE UPDATE SUCCESS");
+        logger.info({ businessId, tenantId: tenant.tenantId }, "Xero OAuth2 connected");
       }
-      logger.info({ businessId, tenantId: tenant.tenantId }, "Xero OAuth2 connected");
-      const dashboardUrl = process.env["DASHBOARD_URL"] ?? "http://localhost:3001";
-      res.redirect(`${dashboardUrl}/dashboard/connect-xero?status=connected`);
+
+      res.redirect(`${dashboardUrl()}/dashboard?connected=true`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── POST /auth/xero/disconnect ──────────────────────────────────────────────
+
+router.post(
+  "/xero/disconnect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.body?.business_id as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+
+      const { error } = await db
+        .from("businesses")
+        .update({
+          xero_tenant_id: null,
+          xero_access_token: null,
+          xero_refresh_token: null,
+          xero_token_expiry: null,
+        })
+        .eq("id", businessId);
+
+      if (error) {
+        logger.error({ error, businessId }, "Xero disconnect DB update failed");
+        res.status(500).json({ error: error.message, code: "DB_ERROR" });
+        return;
+      }
+
+      logger.info({ businessId }, "Xero disconnected");
+      res.json({ ok: true });
     } catch (err) {
       next(err);
     }
