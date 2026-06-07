@@ -1,10 +1,11 @@
-import { createServerClient } from "@adconfirm/db";
-import type { Database } from "@adconfirm/db";
+import { createServerClient } from "../../../../packages/db/dist/index";
+import type { Database } from "../../../../packages/db/dist/index";
 import { logger } from "./logger";
 
 type BusinessRow = Database["public"]["Tables"]["businesses"]["Row"];
 type ReceiptInsert = Database["public"]["Tables"]["receipts"]["Insert"];
 type ReceiptRow = Database["public"]["Tables"]["receipts"]["Row"];
+type WebhookEventRow = Database["public"]["Tables"]["webhook_events"]["Row"];
 type PlacementInsert = Database["public"]["Tables"]["receipt_ad_placements"]["Insert"];
 type PlacementRow = Database["public"]["Tables"]["receipt_ad_placements"]["Row"];
 type AdEventInsert = Database["public"]["Tables"]["ad_events"]["Insert"];
@@ -139,4 +140,64 @@ export async function createPlacement(
     delivered: false,
     delivery_channel: "email",
   });
+}
+
+export async function markReceiptEmailFailed(receiptId: string): Promise<void> {
+  const { error } = await db
+    .from("receipts")
+    .update({ email_failed: true })
+    .eq("id", receiptId);
+  if (error) {
+    logger.error({ err: error, receiptId }, "markReceiptEmailFailed db error");
+  }
+}
+
+// ─── Webhook events ───────────────────────────────────────────────────────────
+
+export async function insertWebhookEvent(
+  source: string,
+  payload: unknown
+): Promise<WebhookEventRow | null> {
+  const { data, error } = await db
+    .from("webhook_events")
+    .insert({ source, payload: payload as any, status: "pending" })
+    .select()
+    .single();
+  if (error) {
+    logger.error({ err: error, source }, "insertWebhookEvent failed");
+    return null;
+  }
+  return data;
+}
+
+export async function resolveWebhookEvent(
+  id: string,
+  status: "processed" | "failed",
+  error?: string
+): Promise<void> {
+  const { error: dbError } = await db
+    .from("webhook_events")
+    .update({
+      status,
+      error: error ?? null,
+      processed_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (dbError) {
+    logger.error({ err: dbError, id, status }, "resolveWebhookEvent failed");
+  }
+}
+
+export async function getFailedWebhookEvents(): Promise<WebhookEventRow[]> {
+  const { data, error } = await db
+    .from("webhook_events")
+    .select("*")
+    .eq("status", "failed")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) {
+    logger.error({ err: error }, "getFailedWebhookEvents failed");
+    return [];
+  }
+  return data ?? [];
 }
