@@ -1,14 +1,11 @@
-import type { Database } from "@adconfirm/db";
+import type { Database } from "../../../../packages/db/dist/index";
 import { logger } from "./logger";
 import { selectAd } from "./adEngine";
 import { sendAdReceipt, sendInvoiceWithAd } from "./mailer";
-import { insertReceipt, insertPlacement, logAdEvent, getBusinessAdSettings, createReceipt, createPlacement, markPlacementDelivered } from "./db";
+import { insertReceipt, insertPlacement, logAdEvent, getBusinessAdSettings, createReceipt, createPlacement, markPlacementDelivered, markReceiptEmailFailed } from "./db";
 
 type Channel = Database["public"]["Tables"]["receipts"]["Row"]["channel"];
 type DocumentType = Database["public"]["Tables"]["receipts"]["Row"]["document_type"];
-
-/** Allowed `channel` when {@link processInvoice} creates a receipt (matches DB check constraint). */
-export type ProcessInvoiceChannel = Channel;
 
 export interface ProcessorInput {
   businessId: string;
@@ -116,8 +113,7 @@ export interface InvoiceData {
 
 export async function processInvoice(
   business: BusinessRow,
-  invoiceData: InvoiceData,
-  channel: ProcessInvoiceChannel = "xero"
+  invoiceData: InvoiceData
 ): Promise<void> {
   // PATENT-CRITICAL: These two lines must execute first, before any async calls
   const injected_at = new Date();
@@ -139,7 +135,7 @@ export async function processInvoice(
   const receipt = await createReceipt(
     business.id,
     invoiceData.invoiceId,
-    channel,
+    "xero",
     "invoice",
     invoiceData.customerEmail,
     totalCents,
@@ -165,12 +161,12 @@ export async function processInvoice(
   await logAdEvent({ placement_id: placement.id, event_type: "impression" });
 
   if (invoiceData.customerEmail) {
-    await sendInvoiceWithAd(invoiceData, ad.creative, business);
-    logger.info(
-      { businessId: business.id, customerEmail: invoiceData.customerEmail },
-      "ad-injected email sent"
-    );
-    await markPlacementDelivered(placement.id);
+    const mailResult = await sendInvoiceWithAd(invoiceData, ad.creative, business);
+    if (mailResult.emailOk) {
+      await markPlacementDelivered(placement.id);
+    } else {
+      await markReceiptEmailFailed(receipt.id);
+    }
     logger.info(
       {
         receipt_id: receipt.id,
@@ -178,13 +174,9 @@ export async function processInvoice(
         business_id: business.id,
         ad_id: ad.creative.id,
         injection_unix_ms,
+        email_ok: mailResult.emailOk,
       },
       "processInvoice: complete"
-    );
-  } else {
-    logger.info(
-      { businessId: business.id, invoiceNumber: invoiceData.invoiceNumber },
-      "processInvoice: ad injected but email skipped — no customer email on invoice contact"
     );
   }
 }
