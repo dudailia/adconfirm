@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import cron from "node-cron";
 import { z } from "zod";
 import { logger } from "../modules/logger";
-import { findBusinessByXeroTenantId, db } from "../modules/db";
+import { findBusinessByXeroTenantId, db, insertWebhookEvent, resolveWebhookEvent } from "../modules/db";
 import { processInvoice, type InvoiceData } from "../modules/processor";
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -211,15 +211,33 @@ function mapXeroInvoiceToInvoiceData(
 }
 
 export async function xeroWebhookHandler(req: Request, res: Response): Promise<void> {
+  // Parse raw body for persistence (req.body is a Buffer from express.raw)
+  let payloadObj: unknown = null;
+  try {
+    payloadObj = JSON.parse((req.body as Buffer).toString("utf8"));
+  } catch {
+    payloadObj = { raw: (req.body as Buffer).toString("utf8") };
+  }
+
+  // Persist raw event immediately — fail-safe (don't crash if table doesn't exist yet)
+  const webhookEvent = await insertWebhookEvent("xero", payloadObj).catch((err) => {
+    logger.warn({ err }, "webhook_events insert failed — continuing without persistence");
+    return null;
+  });
+
   // Respond 200 immediately — Xero requires acknowledgment within 5 seconds
   res.status(200).send();
 
-  const parsed = XeroWebhookSchema.safeParse(req.body);
+  const parsed = XeroWebhookSchema.safeParse(payloadObj);
   if (!parsed.success) {
     logger.warn({ issues: parsed.error.issues }, "invalid xero webhook body");
+    if (webhookEvent) {
+      await resolveWebhookEvent(webhookEvent.id, "failed", "schema validation failed").catch(() => {});
+    }
     return;
   }
 
+  const errors: string[] = [];
   for (const event of parsed.data.events) {
     if (event.eventCategory !== "INVOICE" || event.eventType !== "CREATE") {
       continue;
@@ -227,11 +245,19 @@ export async function xeroWebhookHandler(req: Request, res: Response): Promise<v
     try {
       await handleInvoiceCreated(event.tenantId, event.resourceId);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`${event.resourceId}: ${msg}`);
       logger.error(
         { err, tenantId: event.tenantId, invoiceId: event.resourceId },
         "handleInvoiceCreated failed"
       );
     }
+  }
+
+  if (webhookEvent) {
+    const status = errors.length > 0 ? "failed" : "processed";
+    const errMsg = errors.length > 0 ? errors.join("; ") : undefined;
+    await resolveWebhookEvent(webhookEvent.id, status, errMsg).catch(() => {});
   }
 }
 
