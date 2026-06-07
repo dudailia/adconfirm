@@ -248,6 +248,37 @@ export interface Database {
         ];
       };
 
+      webhook_events: {
+        Row: {
+          id: string;
+          source: string;
+          payload: Json;
+          status: string;
+          error: string | null;
+          processed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          source: string;
+          payload: Json;
+          status?: string;
+          error?: string | null;
+          processed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          source?: string;
+          payload?: Json;
+          status?: string;
+          error?: string | null;
+          processed_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
       receipts: {
         Row: {
           id: string;
@@ -260,6 +291,7 @@ export interface Database {
           currency: string;
           issued_at: string;
           created_at: string;
+          email_failed: boolean;
         };
         Insert: {
           id?: string;
@@ -272,6 +304,7 @@ export interface Database {
           currency: string;
           issued_at: string;
           created_at?: string;
+          email_failed?: boolean;
         };
         Update: {
           id?: string;
@@ -284,6 +317,7 @@ export interface Database {
           currency?: string;
           issued_at?: string;
           created_at?: string;
+          email_failed?: boolean;
         };
         Relationships: [
           {
