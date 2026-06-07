@@ -5,6 +5,7 @@ import { logger } from "./modules/logger";
 import healthRouter from "./routes/health";
 import webhooksRouter from "./routes/webhooks";
 import authRouter from "./routes/auth";
+import adminRouter from "./routes/admin";
 import { errorHandler } from "./middleware/errorHandler";
 
 export function createApp() {
@@ -26,6 +27,7 @@ export function createApp() {
   app.use("/health", healthRouter);
   app.use("/webhooks", webhooksRouter);
   app.use("/auth", authRouter);
+  app.use("/admin", adminRouter);
 
   app.use(errorHandler);
 
