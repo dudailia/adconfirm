@@ -1,10 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
 
   // Resolve business by email first (product model), then by auth UUID
   let business: {
@@ -111,7 +114,7 @@ export default async function DashboardPage() {
 
       {!business && (
         <div style={{marginBottom:'24px',padding:'12px 16px',background:'#1A0D0D',border:'1px solid #3D1515',borderRadius:'8px',color:'#FF9090',fontSize:'13px'}}>
-          No business profile found for {user?.email}. Contact support if this is unexpected.
+          No business profile found for <strong>{user.email}</strong>. Contact support if this is unexpected.
         </div>
       )}
 

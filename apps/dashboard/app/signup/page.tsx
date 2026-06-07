@@ -9,6 +9,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -22,29 +23,66 @@ export default function SignupPage() {
 
     const supabase = createClient();
 
+    // Step 1: create auth user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
     });
+
     if (authError || !authData.user) {
+      console.error("[signup] auth.signUp error:", authError);
       setError(authError?.message ?? "Signup failed. Please try again.");
       setLoading(false);
       return;
     }
 
+    // Step 2: insert businesses row (succeeds regardless of RLS; row uses auth user id)
     const { error: insertError } = await supabase.from("businesses").insert({
       id: authData.user.id,
       name,
       email,
       plan: "free",
     });
+
     if (insertError) {
-      setError(insertError.message);
+      console.error("[signup] businesses insert error:", insertError);
+      setError(`Account created but profile setup failed: ${insertError.message}. Please contact support.`);
       setLoading(false);
       return;
     }
 
+    // Step 3: check whether a session was issued (email confirmation may be required)
+    if (!authData.session) {
+      // Supabase email confirmation is enabled — user must confirm before logging in
+      setConfirmed(true);
+      setLoading(false);
+      return;
+    }
+
+    // Session is live — navigate to dashboard
     window.location.replace("/dashboard");
+  }
+
+  // Shown after successful signup when email confirmation is required
+  if (confirmed) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md rounded-xl border border-border bg-surface p-8 shadow-xl text-center">
+          <div className="mb-4 text-4xl">✉️</div>
+          <h2 className="text-xl font-bold text-white mb-2">Check your email</h2>
+          <p className="text-sm text-muted-fg mb-6">
+            We sent a confirmation link to <span className="text-white">{email}</span>.
+            Click it to activate your account, then sign in.
+          </p>
+          <Link
+            href="/login"
+            className="block w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-white text-center transition hover:bg-accent-hover"
+          >
+            Go to sign in
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
