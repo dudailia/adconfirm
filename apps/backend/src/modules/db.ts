@@ -6,6 +6,7 @@ type BusinessRow = Database["public"]["Tables"]["businesses"]["Row"];
 type ReceiptInsert = Database["public"]["Tables"]["receipts"]["Insert"];
 type ReceiptRow = Database["public"]["Tables"]["receipts"]["Row"];
 type WebhookEventRow = Database["public"]["Tables"]["webhook_events"]["Row"];
+type AdSpendDailyRow = Database["public"]["Tables"]["ad_spend_daily"]["Row"];
 type PlacementInsert = Database["public"]["Tables"]["receipt_ad_placements"]["Insert"];
 type PlacementRow = Database["public"]["Tables"]["receipt_ad_placements"]["Row"];
 type AdEventInsert = Database["public"]["Tables"]["ad_events"]["Insert"];
@@ -40,9 +41,10 @@ export async function getActiveCampaignsWithCreatives(): Promise<CampaignWithCre
   const { data, error } = await db
     .from("ad_campaigns")
     .select(
-      "id, advertiser_id, title, status, budget_cents, spent_cents, start_date, end_date, target_industries, target_regions, created_at, ad_creatives(id, campaign_id, headline, body_text, cta_text, cta_url, qr_code_url, image_url, created_at)"
+      "id, advertiser_id, title, status, budget_cents, spent_cents, daily_budget_cents, start_date, end_date, target_industries, target_regions, created_at, ad_creatives(id, campaign_id, headline, body_text, cta_text, cta_url, qr_code_url, image_url, created_at)"
     )
     .eq("status", "active")
+    .gt("daily_budget_cents", 0)
     .lte("start_date", today)
     .or(`end_date.is.null,end_date.gte.${today}`);
   if (error) throw new Error(`getActiveCampaignsWithCreatives: ${error.message}`);
@@ -200,4 +202,51 @@ export async function getFailedWebhookEvents(): Promise<WebhookEventRow[]> {
     return [];
   }
   return data ?? [];
+}
+
+// ─── Daily ad spend ───────────────────────────────────────────────────────────
+
+export async function getTodaySpendForCampaigns(
+  campaignIds: string[]
+): Promise<Map<string, AdSpendDailyRow>> {
+  if (campaignIds.length === 0) return new Map();
+  const today = new Date().toISOString().split("T")[0]!;
+  const { data, error } = await db
+    .from("ad_spend_daily")
+    .select("*")
+    .in("campaign_id", campaignIds)
+    .eq("date", today);
+  if (error) {
+    logger.error({ err: error }, "getTodaySpendForCampaigns failed");
+    return new Map();
+  }
+  return new Map((data ?? []).map((r) => [r.campaign_id, r]));
+}
+
+/**
+ * Upsert ad_spend_daily for today: increment impressions by 1 and update
+ * spend_cents using integer math for $2 CPM (0.2 cents/impression).
+ * spend_cents = floor(new_impressions * 2 / 10)
+ */
+export async function incrementDailySpend(campaignId: string): Promise<void> {
+  const today = new Date().toISOString().split("T")[0]!;
+  const { error } = await db.rpc("upsert_ad_spend_daily", {
+    p_campaign_id: campaignId,
+    p_date: today,
+  });
+  if (error) {
+    // Fallback: plain upsert if RPC not available
+    const { data: existing } = await db
+      .from("ad_spend_daily")
+      .select("impressions")
+      .eq("campaign_id", campaignId)
+      .eq("date", today)
+      .maybeSingle();
+    const newImpressions = (existing?.impressions ?? 0) + 1;
+    const newSpendCents = Math.floor((newImpressions * 2) / 10);
+    await db.from("ad_spend_daily").upsert(
+      { campaign_id: campaignId, date: today, impressions: newImpressions, spend_cents: newSpendCents },
+      { onConflict: "campaign_id,date" }
+    );
+  }
 }

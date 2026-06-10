@@ -99,6 +99,21 @@ export default async function AdvertiserDashboardPage() {
 
   const rows = (campaigns ?? []) as CampaignRow[];
 
+  // Fetch today's spend for all campaigns in one query
+  const today = new Date().toISOString().split("T")[0]!;
+  const campaignIds = rows.map((c) => c.id);
+  const { data: todaySpendRows } = campaignIds.length > 0
+    ? await supabase
+        .from("ad_spend_daily")
+        .select("campaign_id, impressions, spend_cents")
+        .in("campaign_id", campaignIds)
+        .eq("date", today)
+    : { data: [] };
+
+  const todaySpend = new Map(
+    (todaySpendRows ?? []).map((r) => [r.campaign_id, r])
+  );
+
   const fmtMoney = (cents: number) =>
     new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(cents / 100);
 
@@ -139,15 +154,16 @@ export default async function AdvertiserDashboardPage() {
               <tr className="border-b border-border text-muted-fg">
                 <th className="pb-2 pr-4 font-medium">Name</th>
                 <th className="pb-2 pr-4 font-medium">Status</th>
-                <th className="pb-2 pr-4 font-medium">Budget</th>
-                <th className="pb-2 pr-4 font-medium">Spent</th>
+                <th className="pb-2 pr-4 font-medium">Daily budget</th>
+                <th className="pb-2 pr-4 font-medium">Today's spend</th>
+                <th className="pb-2 pr-4 font-medium">Total spent</th>
                 <th className="pb-2 font-medium">Start date</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-6 text-muted-fg">
+                  <td colSpan={6} className="py-6 text-muted-fg">
                     No campaigns yet.{" "}
                     <Link href="/advertiser/campaigns/new" className="text-accent hover:underline">
                       Create one
@@ -173,7 +189,25 @@ export default async function AdvertiserDashboardPage() {
                         {c.status}
                       </span>
                     </td>
-                    <td className="py-3 pr-4 text-muted-fg">{fmtMoney(c.budget_cents)}</td>
+                    <td className="py-3 pr-4 text-muted-fg">
+                      {c.daily_budget_cents ? fmtMoney(c.daily_budget_cents) : "—"}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {(() => {
+                        const s = todaySpend.get(c.id);
+                        const spent = s?.spend_cents ?? 0;
+                        const budget = c.daily_budget_cents ?? 0;
+                        if (!budget) return <span className="text-muted-fg">—</span>;
+                        const pct = Math.min(100, Math.round((spent / budget) * 100));
+                        const color = pct >= 100 ? "text-danger" : pct >= 80 ? "text-warning" : "text-success";
+                        return (
+                          <span className={color}>
+                            {fmtMoney(spent)} / {fmtMoney(budget)}
+                            <span className="ml-1 text-xs text-muted-fg">({pct}%)</span>
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="py-3 pr-4 text-muted-fg">{fmtMoney(c.spent_cents)}</td>
                     <td className="py-3 text-muted-fg">{c.start_date}</td>
                   </tr>

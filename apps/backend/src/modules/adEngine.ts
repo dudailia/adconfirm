@@ -1,5 +1,10 @@
 import type { Database } from "@adconfirm/db";
-import { getActiveCampaignsWithCreatives, type CampaignWithCreatives } from "./db";
+import {
+  getActiveCampaignsWithCreatives,
+  getTodaySpendForCampaigns,
+  incrementDailySpend,
+  type CampaignWithCreatives,
+} from "./db";
 import { logger } from "./logger";
 
 type CampaignRow = Database["public"]["Tables"]["ad_campaigns"]["Row"];
@@ -34,7 +39,8 @@ export async function selectAd(
   const campaigns = await getActiveCampaignsWithCreatives();
   const today = new Date().toISOString().split("T")[0]!;
 
-  const eligible = (campaigns as CampaignWithCreatives[]).filter((c) => {
+  // Pre-filter without daily spend check (cheap)
+  const candidates = (campaigns as CampaignWithCreatives[]).filter((c) => {
     if (c.spent_cents >= c.budget_cents) return false;
     if (c.start_date > today) return false;
     if (c.end_date && c.end_date < today) return false;
@@ -45,15 +51,35 @@ export async function selectAd(
     return true;
   });
 
+  if (candidates.length === 0) {
+    logger.debug({ businessIndustries, businessRegions }, "no eligible ads (pre-filter)");
+    return null;
+  }
+
+  // Fetch today's spend for all candidates in a single query
+  const todaySpend = await getTodaySpendForCampaigns(candidates.map((c) => c.id));
+
+  // Apply daily budget check
+  const eligible = candidates.filter((c) => {
+    const spend = todaySpend.get(c.id)?.spend_cents ?? 0;
+    const dailyBudget = c.daily_budget_cents ?? 0;
+    if (dailyBudget > 0 && spend >= dailyBudget) {
+      logger.debug({ campaignId: c.id, spend, dailyBudget }, "campaign daily budget exhausted");
+      return false;
+    }
+    return true;
+  });
+
   if (eligible.length === 0) {
-    logger.debug({ businessIndustries, businessRegions }, "no eligible ads");
+    logger.debug({ businessIndustries, businessRegions }, "no eligible ads (daily budget check)");
     return null;
   }
 
   const weighted = eligible.map((c) => ({
     campaign: c as unknown as CampaignRow,
     creative: (c.ad_creatives as AdCreativeRow[])[0]!,
-    weight: c.budget_cents - c.spent_cents,
+    // Weight by remaining daily budget rather than total budget
+    weight: Math.max(1, (c.daily_budget_cents ?? 0) - (todaySpend.get(c.id)?.spend_cents ?? 0)),
   }));
 
   const picked = weightedRandom(weighted);
@@ -65,4 +91,16 @@ export async function selectAd(
   );
 
   return { creative: picked.creative, campaign: picked.campaign };
+}
+
+/**
+ * Call after a placement is recorded to track daily spend.
+ * At $2 CPM: 0.2 cents per impression, tracked via integer math.
+ */
+export async function recordAdImpression(campaignId: string): Promise<void> {
+  try {
+    await incrementDailySpend(campaignId);
+  } catch (err) {
+    logger.error({ err, campaignId }, "recordAdImpression failed");
+  }
 }

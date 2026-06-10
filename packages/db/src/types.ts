@@ -116,6 +116,39 @@ export interface Database {
         ];
       };
 
+      ad_spend_daily: {
+        Row: {
+          id: string;
+          campaign_id: string;
+          date: string;
+          impressions: number;
+          spend_cents: number;
+        };
+        Insert: {
+          id?: string;
+          campaign_id: string;
+          date?: string;
+          impressions?: number;
+          spend_cents?: number;
+        };
+        Update: {
+          id?: string;
+          campaign_id?: string;
+          date?: string;
+          impressions?: number;
+          spend_cents?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ad_spend_daily_campaign_id_fkey";
+            columns: ["campaign_id"];
+            isOneToOne: false;
+            referencedRelation: "ad_campaigns";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+
       ad_campaigns: {
         Row: {
           id: string;

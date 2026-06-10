@@ -1,6 +1,6 @@
 import type { Database } from "../../../../packages/db/dist/index";
 import { logger } from "./logger";
-import { selectAd } from "./adEngine";
+import { selectAd, recordAdImpression } from "./adEngine";
 import { sendAdReceipt, sendInvoiceWithAd } from "./mailer";
 import { insertReceipt, insertPlacement, logAdEvent, getBusinessAdSettings, createReceipt, createPlacement, markPlacementDelivered, markReceiptEmailFailed } from "./db";
 
@@ -160,6 +160,7 @@ export async function processInvoice(
   );
 
   await logAdEvent({ placement_id: placement.id, event_type: "impression" });
+  await recordAdImpression(ad.campaign.id);
 
   if (invoiceData.customerEmail) {
     const mailResult = await sendInvoiceWithAd(invoiceData, ad.creative, business);
