@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { EposNowCard } from './EposNowCard'
+import { ReceiptHistory } from './ReceiptHistory'
 
 export const dynamic = 'force-dynamic'
 
@@ -206,11 +207,14 @@ export default async function DashboardPage({
       </div>
 
       {/* Other actions */}
-      <div>
+      <div style={{marginBottom:'40px'}}>
         <a href="/dashboard/settings" style={{display:'inline-block',padding:'12px 24px',background:'#0D1629',color:'white',borderRadius:'6px',textDecoration:'none',border:'1px solid #1A2540',fontSize:'14px'}}>
           Settings
         </a>
       </div>
+
+      {/* Receipt history — only shown when business profile is found */}
+      {business && <ReceiptHistory businessId={business.id} />}
     </div>
   )
 }
