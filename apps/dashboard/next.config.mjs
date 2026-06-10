@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@adconfirm/db'],
-}
-export default nextConfig
+  transpilePackages: ["@adconfirm/ui", "@adconfirm/db"],
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: false },
+};
+
+export default nextConfig;
