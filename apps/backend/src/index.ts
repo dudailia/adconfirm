@@ -43,4 +43,12 @@ app.listen(Number(PORT), () => {
   auditEnv();
   startEposNowPolling();
   logger.info("Epos Now polling started");
+
+  // Ping own /health every 10 minutes to prevent Render free tier from sleeping
+  const SELF_URL = `http://localhost:${PORT}`;
+  setInterval(() => {
+    fetch(`${SELF_URL}/health`)
+      .then(() => logger.info("keep-alive ping ok"))
+      .catch((err: unknown) => logger.warn({ err }, "keep-alive ping failed"));
+  }, 10 * 60 * 1000);
 });
