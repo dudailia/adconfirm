@@ -20,6 +20,7 @@ export interface Database {
           xero_refresh_token: string | null;
           xero_token_expiry: string | null;
           eposnow_api_key: string | null;
+          eposnow_enabled: boolean;
           stripe_customer_id: string | null;
           plan: string;
         };
@@ -33,6 +34,7 @@ export interface Database {
           xero_refresh_token?: string | null;
           xero_token_expiry?: string | null;
           eposnow_api_key?: string | null;
+          eposnow_enabled?: boolean;
           stripe_customer_id?: string | null;
           plan?: string;
         };
@@ -46,6 +48,7 @@ export interface Database {
           xero_refresh_token?: string | null;
           xero_token_expiry?: string | null;
           eposnow_api_key?: string | null;
+          eposnow_enabled?: boolean;
           stripe_customer_id?: string | null;
           plan?: string;
         };
