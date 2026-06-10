@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "node -e \"const fs=require('fs'),p=require.resolve('next/package.json').replace('package.json','dist/client/components/noop-head.js');if(!fs.existsSync(p)){fs.writeFileSync(p,'\"use strict\";Object.defineProperty(exports,\\\"__esModule\\\",{value:true});exports.default=function(){return null;};')}\" && next build",
+    "build": "node scripts/fix-noop-head.js && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
