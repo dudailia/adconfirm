@@ -2,6 +2,8 @@ import { Router } from "express";
 import express from "express";
 import { validateXeroWebhook } from "../middleware/validateXeroWebhook";
 import { xeroWebhookHandler } from "../adapters/xero";
+import { validateQBOWebhook } from "../middleware/validateQBOWebhook";
+import { qboWebhookHandler } from "../adapters/quickbooks";
 
 const router = Router();
 
@@ -11,6 +13,13 @@ router.post(
   express.raw({ type: "*/*" }),
   validateXeroWebhook,
   xeroWebhookHandler
+);
+
+router.post(
+  "/quickbooks",
+  express.raw({ type: "*/*" }),
+  validateQBOWebhook,
+  qboWebhookHandler
 );
 
 export default router;
