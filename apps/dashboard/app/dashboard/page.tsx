@@ -41,11 +41,14 @@ export default async function DashboardPage({
     xero_access_token: string | null
     eposnow_api_key: string | null
     eposnow_enabled: boolean
-    qbo_realm_id: string | null
-    qbo_access_token: string | null
+    qbo_realm_id?: string | null
+    qbo_access_token?: string | null
   } | null = null
 
-  const SELECT = 'id, name, email, xero_tenant_id, xero_access_token, eposnow_api_key, eposnow_enabled, qbo_realm_id, qbo_access_token'
+  // Core select excludes qbo_* so the dashboard never hard-breaks if the
+  // QBO migration (006) has not been applied yet — qbo fields are fetched
+  // separately below in a fail-safe query.
+  const SELECT = 'id, name, email, xero_tenant_id, xero_access_token, eposnow_api_key, eposnow_enabled'
 
   if (user.email) {
     const { data: byEmail } = await supabase
@@ -63,6 +66,20 @@ export default async function DashboardPage({
       .eq('id', user.id)
       .maybeSingle()
     business = byId ?? null
+  }
+
+  // QBO fields — separate query so a missing column (pre-migration) degrades
+  // only the QuickBooks card instead of nulling the whole business row.
+  if (business) {
+    const { data: qbo } = await supabase
+      .from('businesses')
+      .select('qbo_realm_id, qbo_access_token')
+      .eq('id', business.id)
+      .maybeSingle()
+    if (qbo) {
+      business.qbo_realm_id = qbo.qbo_realm_id
+      business.qbo_access_token = qbo.qbo_access_token
+    }
   }
 
   const xeroConnected = business?.xero_tenant_id != null && business?.xero_access_token != null
