@@ -21,6 +21,11 @@ export interface Database {
           xero_token_expiry: string | null;
           eposnow_api_key: string | null;
           eposnow_enabled: boolean;
+          qbo_tenant_id: string | null;
+          qbo_access_token: string | null;
+          qbo_refresh_token: string | null;
+          qbo_token_expiry: string | null;
+          qbo_realm_id: string | null;
           stripe_customer_id: string | null;
           plan: string;
         };
@@ -35,6 +40,11 @@ export interface Database {
           xero_token_expiry?: string | null;
           eposnow_api_key?: string | null;
           eposnow_enabled?: boolean;
+          qbo_tenant_id?: string | null;
+          qbo_access_token?: string | null;
+          qbo_refresh_token?: string | null;
+          qbo_token_expiry?: string | null;
+          qbo_realm_id?: string | null;
           stripe_customer_id?: string | null;
           plan?: string;
         };
@@ -49,6 +59,11 @@ export interface Database {
           xero_token_expiry?: string | null;
           eposnow_api_key?: string | null;
           eposnow_enabled?: boolean;
+          qbo_tenant_id?: string | null;
+          qbo_access_token?: string | null;
+          qbo_refresh_token?: string | null;
+          qbo_token_expiry?: string | null;
+          qbo_realm_id?: string | null;
           stripe_customer_id?: string | null;
           plan?: string;
         };
@@ -320,7 +335,7 @@ export interface Database {
           id: string;
           business_id: string;
           external_id: string;
-          channel: "xero" | "eposnow" | "shopify" | "manual";
+          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks";
           document_type: "invoice" | "receipt" | "purchase_order";
           customer_email: string | null;
           total_cents: number;
@@ -333,7 +348,7 @@ export interface Database {
           id?: string;
           business_id: string;
           external_id: string;
-          channel: "xero" | "eposnow" | "shopify" | "manual";
+          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks";
           document_type: "invoice" | "receipt" | "purchase_order";
           customer_email?: string | null;
           total_cents: number;
