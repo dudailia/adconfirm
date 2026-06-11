@@ -168,4 +168,151 @@ router.post(
   }
 );
 
+// ─── GET /auth/qbo/connect ───────────────────────────────────────────────────
+
+router.get(
+  "/qbo/connect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.query["business_id"] as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+      const state = Buffer.from(JSON.stringify({ businessId })).toString("base64url");
+      const params = new URLSearchParams({
+        client_id: process.env["QBO_CLIENT_ID"]!,
+        scope: "com.intuit.quickbooks.accounting",
+        redirect_uri: process.env["QBO_REDIRECT_URI"]!,
+        response_type: "code",
+        access_type: "offline",
+        state,
+      });
+      logger.info({ businessId }, "redirecting to QuickBooks consent URL");
+      res.redirect(`https://appcenter.intuit.com/connect/oauth2?${params}`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/qbo/callback ──────────────────────────────────────────────────
+
+router.get(
+  "/qbo/callback",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.query["error"]) {
+        logger.warn({ qboError: req.query["error"] }, "QBO OAuth denied by user");
+        return res.redirect(`${dashboardUrl()}/dashboard?qbo_error=access_denied`);
+      }
+
+      const code = req.query["code"] as string | undefined;
+      const stateParam = req.query["state"] as string | undefined;
+      const realmId = req.query["realmId"] as string | undefined;
+
+      if (!code || !stateParam || !realmId) {
+        logger.warn({ query: req.query }, "QBO callback missing required params");
+        return res.redirect(`${dashboardUrl()}/dashboard?qbo_error=missing_params`);
+      }
+
+      let businessId: string;
+      try {
+        businessId = (
+          JSON.parse(Buffer.from(stateParam, "base64url").toString("utf8")) as { businessId: string }
+        ).businessId;
+      } catch {
+        return res.redirect(`${dashboardUrl()}/dashboard?qbo_error=invalid_state`);
+      }
+
+      // Exchange code for tokens
+      const tokenResponse = await fetch("https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization:
+            "Basic " +
+            Buffer.from(`${process.env["QBO_CLIENT_ID"]!}:${process.env["QBO_CLIENT_SECRET"]!}`).toString("base64"),
+          Accept: "application/json",
+        },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: process.env["QBO_REDIRECT_URI"]!,
+        }).toString(),
+      });
+
+      const tokenSet = (await tokenResponse.json()) as Record<string, unknown>;
+      if (!tokenSet["access_token"]) {
+        logger.error({ tokenSet, businessId }, "QBO token exchange failed");
+        return res.redirect(`${dashboardUrl()}/dashboard?qbo_error=token_failed`);
+      }
+
+      const { error: dbError } = await db
+        .from("businesses")
+        .update({
+          qbo_realm_id: realmId,
+          qbo_tenant_id: realmId,
+          qbo_access_token: String(tokenSet["access_token"]),
+          qbo_refresh_token:
+            typeof tokenSet["refresh_token"] === "string" ? tokenSet["refresh_token"] : null,
+          qbo_token_expiry:
+            typeof tokenSet["x_refresh_token_expires_in"] === "number"
+              ? new Date(Date.now() + (tokenSet["x_refresh_token_expires_in"] as number) * 1000).toISOString()
+              : typeof tokenSet["expires_in"] === "number"
+                ? new Date(Date.now() + (tokenSet["expires_in"] as number) * 1000).toISOString()
+                : null,
+        })
+        .eq("id", businessId);
+
+      if (dbError) {
+        logger.error({ dbError, businessId }, "Supabase update failed after QBO connect");
+      } else {
+        logger.info({ businessId, realmId }, "QuickBooks Online connected");
+      }
+
+      res.redirect(`${dashboardUrl()}/dashboard?qbo_connected=true`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── POST /auth/qbo/disconnect ───────────────────────────────────────────────
+
+router.post(
+  "/qbo/disconnect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.body?.business_id as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+
+      const { error } = await db
+        .from("businesses")
+        .update({
+          qbo_tenant_id: null,
+          qbo_access_token: null,
+          qbo_refresh_token: null,
+          qbo_token_expiry: null,
+          qbo_realm_id: null,
+        })
+        .eq("id", businessId);
+
+      if (error) {
+        logger.error({ error, businessId }, "QBO disconnect DB update failed");
+        res.status(500).json({ error: error.message, code: "DB_ERROR" });
+        return;
+      }
+
+      logger.info({ businessId }, "QuickBooks Online disconnected");
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;
