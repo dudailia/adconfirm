@@ -26,6 +26,10 @@ export interface Database {
           qbo_refresh_token: string | null;
           qbo_token_expiry: string | null;
           qbo_realm_id: string | null;
+          fa_access_token: string | null;
+          fa_refresh_token: string | null;
+          fa_token_expiry: string | null;
+          fa_webhook_url: string | null;
           stripe_customer_id: string | null;
           plan: string;
         };
@@ -45,6 +49,10 @@ export interface Database {
           qbo_refresh_token?: string | null;
           qbo_token_expiry?: string | null;
           qbo_realm_id?: string | null;
+          fa_access_token?: string | null;
+          fa_refresh_token?: string | null;
+          fa_token_expiry?: string | null;
+          fa_webhook_url?: string | null;
           stripe_customer_id?: string | null;
           plan?: string;
         };
@@ -64,6 +72,10 @@ export interface Database {
           qbo_refresh_token?: string | null;
           qbo_token_expiry?: string | null;
           qbo_realm_id?: string | null;
+          fa_access_token?: string | null;
+          fa_refresh_token?: string | null;
+          fa_token_expiry?: string | null;
+          fa_webhook_url?: string | null;
           stripe_customer_id?: string | null;
           plan?: string;
         };
@@ -335,7 +347,7 @@ export interface Database {
           id: string;
           business_id: string;
           external_id: string;
-          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks";
+          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks" | "freeagent";
           document_type: "invoice" | "receipt" | "purchase_order";
           customer_email: string | null;
           total_cents: number;
@@ -348,7 +360,7 @@ export interface Database {
           id?: string;
           business_id: string;
           external_id: string;
-          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks";
+          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks" | "freeagent";
           document_type: "invoice" | "receipt" | "purchase_order";
           customer_email?: string | null;
           total_cents: number;
@@ -361,7 +373,7 @@ export interface Database {
           id?: string;
           business_id?: string;
           external_id?: string;
-          channel?: "xero" | "eposnow" | "shopify" | "manual";
+          channel?: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks" | "freeagent";
           document_type?: "invoice" | "receipt" | "purchase_order";
           customer_email?: string | null;
           total_cents?: number;

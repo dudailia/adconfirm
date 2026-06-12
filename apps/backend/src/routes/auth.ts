@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../modules/db";
 import { logger } from "../modules/logger";
+import { registerFAWebhook, deleteFAWebhook, resolveFAAccessToken } from "../adapters/freeagent";
 
 const router = Router();
 
@@ -308,6 +309,179 @@ router.post(
       }
 
       logger.info({ businessId }, "QuickBooks Online disconnected");
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/freeagent/connect ─────────────────────────────────────────────
+
+router.get(
+  "/freeagent/connect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.query["business_id"] as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+      const state = Buffer.from(JSON.stringify({ businessId })).toString("base64url");
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: process.env["FREEAGENT_CLIENT_ID"]!,
+        redirect_uri: process.env["FREEAGENT_REDIRECT_URI"]!,
+        state,
+      });
+      logger.info({ businessId }, "redirecting to FreeAgent consent URL");
+      res.redirect(`https://api.freeagent.com/v2/approve_app?${params}`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/freeagent/callback ─────────────────────────────────────────────
+
+router.get(
+  "/freeagent/callback",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.query["error"]) {
+        logger.warn({ faError: req.query["error"] }, "FreeAgent OAuth denied by user");
+        return res.redirect(`${dashboardUrl()}/dashboard?fa_error=access_denied`);
+      }
+
+      const code = req.query["code"] as string | undefined;
+      const stateParam = req.query["state"] as string | undefined;
+      if (!code || !stateParam) {
+        logger.warn({ query: req.query }, "FreeAgent callback missing code or state");
+        return res.redirect(`${dashboardUrl()}/dashboard?fa_error=missing_params`);
+      }
+
+      let businessId: string;
+      try {
+        businessId = (
+          JSON.parse(Buffer.from(stateParam, "base64url").toString("utf8")) as { businessId: string }
+        ).businessId;
+      } catch {
+        logger.warn({ stateParam }, "FreeAgent callback invalid state param");
+        return res.redirect(`${dashboardUrl()}/dashboard?fa_error=invalid_state`);
+      }
+
+      // Exchange code for tokens
+      const tokenResponse = await fetch("https://api.freeagent.com/v2/token_endpoint", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization:
+            "Basic " +
+            Buffer.from(
+              `${process.env["FREEAGENT_CLIENT_ID"]!}:${process.env["FREEAGENT_CLIENT_SECRET"]!}`
+            ).toString("base64"),
+        },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: process.env["FREEAGENT_REDIRECT_URI"]!,
+        }).toString(),
+      });
+
+      const tokenSet = (await tokenResponse.json()) as Record<string, unknown>;
+      if (!tokenSet["access_token"]) {
+        logger.error({ tokenSet, businessId }, "FreeAgent token exchange failed");
+        return res.redirect(`${dashboardUrl()}/dashboard?fa_error=token_failed`);
+      }
+
+      const accessToken = String(tokenSet["access_token"]);
+
+      // Persist tokens first so we can use resolveFAAccessToken in registerFAWebhook
+      const { error: dbError } = await db
+        .from("businesses")
+        .update({
+          fa_access_token: accessToken,
+          fa_refresh_token:
+            typeof tokenSet["refresh_token"] === "string" ? tokenSet["refresh_token"] : null,
+          fa_token_expiry:
+            typeof tokenSet["expires_in"] === "number"
+              ? new Date(Date.now() + (tokenSet["expires_in"] as number) * 1000).toISOString()
+              : null,
+        })
+        .eq("id", businessId);
+
+      if (dbError) {
+        logger.error({ dbError, businessId }, "Supabase update failed after FreeAgent connect");
+        return res.redirect(`${dashboardUrl()}/dashboard?fa_error=db_failed`);
+      }
+
+      // Register webhook at FreeAgent (best-effort — don't fail connect if this errors)
+      const webhookUrl = await registerFAWebhook(accessToken, businessId).catch((err) => {
+        logger.warn({ err, businessId }, "FreeAgent webhook registration failed — skipping");
+        return null;
+      });
+
+      if (webhookUrl) {
+        await db
+          .from("businesses")
+          .update({ fa_webhook_url: webhookUrl })
+          .eq("id", businessId)
+          .then(({ error }) => {
+            if (error) logger.warn({ error, businessId }, "failed to persist fa_webhook_url");
+          });
+      }
+
+      logger.info({ businessId, webhookUrl }, "FreeAgent connected");
+      res.redirect(`${dashboardUrl()}/dashboard?fa_connected=true`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── POST /auth/freeagent/disconnect ─────────────────────────────────────────
+
+router.post(
+  "/freeagent/disconnect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.body?.business_id as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+
+      // Fetch current tokens to clean up webhook before nulling them
+      const { data: business } = await db
+        .from("businesses")
+        .select("fa_access_token, fa_refresh_token, fa_token_expiry, fa_webhook_url")
+        .eq("id", businessId)
+        .single();
+
+      if (business?.fa_webhook_url) {
+        const accessToken = await resolveFAAccessToken(business as any).catch(() => null);
+        if (accessToken) {
+          await deleteFAWebhook(accessToken, business.fa_webhook_url).catch(() => {});
+        }
+      }
+
+      const { error } = await db
+        .from("businesses")
+        .update({
+          fa_access_token: null,
+          fa_refresh_token: null,
+          fa_token_expiry: null,
+          fa_webhook_url: null,
+        })
+        .eq("id", businessId);
+
+      if (error) {
+        logger.error({ error, businessId }, "FreeAgent disconnect DB update failed");
+        res.status(500).json({ error: error.message, code: "DB_ERROR" });
+        return;
+      }
+
+      logger.info({ businessId }, "FreeAgent disconnected");
       res.json({ ok: true });
     } catch (err) {
       next(err);
