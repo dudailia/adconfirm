@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     rootDir: .
-    buildCommand: npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @adconfirm/backend build
+    buildCommand: npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @adconfirm/db build && pnpm --filter @adconfirm/backend build
     startCommand: node apps/backend/dist/index.js
     healthCheckPath: /health
     autoDeploy: true
@@ -35,3 +35,12 @@ services:
         sync: false
       - key: RESEND_FROM_EMAIL
         value: invoices@adconfirm.io
+      - key: QBO_REDIRECT_URI
+        value: https://adconfirm-api.onrender.com/auth/qbo/callback
+      # ── QuickBooks Online — set values in the Render dashboard ──
+      - key: QBO_CLIENT_ID
+        sync: false
+      - key: QBO_CLIENT_SECRET
+        sync: false
+      - key: INTUIT_WEBHOOK_VERIFIER_TOKEN
+        sync: false
