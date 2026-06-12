@@ -151,7 +151,7 @@ export async function sendInvoiceWithAd(
 ): Promise<SendInvoiceResult> {
   if (!invoiceData.customerEmail) {
     logger.info({ invoiceId: invoiceData.invoiceId }, "no customer email — skipping send");
-    return { placementId: null };
+    return { placementId: null, emailOk: false };
   }
 
   const resend = getResend();

@@ -30,6 +30,7 @@ const activeCampaign: CampaignWithCreatives = {
   status: "active",
   budget_cents: 10000,
   spent_cents: 5000,
+  daily_budget_cents: 500,
   start_date: "2020-01-01",
   end_date: null,
   target_industries: ["retail"],

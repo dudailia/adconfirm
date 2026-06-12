@@ -230,7 +230,8 @@ export async function getTodaySpendForCampaigns(
  */
 export async function incrementDailySpend(campaignId: string): Promise<void> {
   const today = new Date().toISOString().split("T")[0]!;
-  const { error } = await db.rpc("upsert_ad_spend_daily", {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (db as any).rpc("upsert_ad_spend_daily", {
     p_campaign_id: campaignId,
     p_date: today,
   });
