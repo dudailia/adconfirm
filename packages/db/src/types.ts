@@ -43,6 +43,10 @@ export interface Database {
           sage_token_expiry: string | null;
           sage_business_id: string | null;
           sage_webhook_id: string | null;
+          zettle_access_token: string | null;
+          zettle_refresh_token: string | null;
+          zettle_token_expiry: string | null;
+          zettle_webhook_id: string | null;
           stripe_customer_id: string | null;
           plan: string;
         };
@@ -79,6 +83,10 @@ export interface Database {
           sage_token_expiry?: string | null;
           sage_business_id?: string | null;
           sage_webhook_id?: string | null;
+          zettle_access_token?: string | null;
+          zettle_refresh_token?: string | null;
+          zettle_token_expiry?: string | null;
+          zettle_webhook_id?: string | null;
           stripe_customer_id?: string | null;
           plan?: string;
         };
@@ -115,6 +123,10 @@ export interface Database {
           sage_token_expiry?: string | null;
           sage_business_id?: string | null;
           sage_webhook_id?: string | null;
+          zettle_access_token?: string | null;
+          zettle_refresh_token?: string | null;
+          zettle_token_expiry?: string | null;
+          zettle_webhook_id?: string | null;
           stripe_customer_id?: string | null;
           plan?: string;
         };
@@ -386,7 +398,7 @@ export interface Database {
           id: string;
           business_id: string;
           external_id: string;
-          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks" | "freeagent" | "square" | "sage";
+          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks" | "freeagent" | "square" | "sage" | "zettle";
           document_type: "invoice" | "receipt" | "purchase_order";
           customer_email: string | null;
           total_cents: number;
@@ -399,7 +411,7 @@ export interface Database {
           id?: string;
           business_id: string;
           external_id: string;
-          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks" | "freeagent" | "square" | "sage";
+          channel: "xero" | "eposnow" | "shopify" | "manual" | "quickbooks" | "freeagent" | "square" | "sage" | "zettle";
           document_type: "invoice" | "receipt" | "purchase_order";
           customer_email?: string | null;
           total_cents: number;

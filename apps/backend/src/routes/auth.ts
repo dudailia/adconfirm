@@ -6,6 +6,7 @@ import { registerFAWebhook, deleteFAWebhook, resolveFAAccessToken } from "../ada
 import { registerSquareWebhook, deleteSquareWebhook, resolveSquareToken } from "../adapters/square";
 import { registerShopifyWebhook, deleteShopifyWebhook } from "../adapters/shopify";
 import { registerSageWebhook, deleteSageWebhook, resolveSageToken } from "../adapters/sage";
+import { registerZettleWebhook, deleteZettleWebhook, resolveZettleToken } from "../adapters/zettle";
 
 const router = Router();
 
@@ -1012,6 +1013,171 @@ router.post(
       }
 
       logger.info({ businessId }, "Sage disconnected");
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/zettle/connect ─────────────────────────────────────────────────
+
+router.get(
+  "/zettle/connect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.query["business_id"] as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+      const state = Buffer.from(JSON.stringify({ businessId })).toString("base64url");
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: process.env["ZETTLE_CLIENT_ID"]!,
+        redirect_uri: process.env["ZETTLE_REDIRECT_URI"]!,
+        scope: "READ:PURCHASE READ:USERINFO",
+        state,
+      });
+      logger.info({ businessId }, "redirecting to Zettle consent URL");
+      res.redirect(`https://oauth.zettle.com/oauth/exchange/all?${params}`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/zettle/callback ────────────────────────────────────────────────
+
+router.get(
+  "/zettle/callback",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.query["error"]) {
+        logger.warn({ zettleError: req.query["error"] }, "Zettle OAuth denied by user");
+        return res.redirect(`${dashboardUrl()}/dashboard?zettle_error=access_denied`);
+      }
+
+      const code = req.query["code"] as string | undefined;
+      const stateParam = req.query["state"] as string | undefined;
+      if (!code || !stateParam) {
+        logger.warn({ query: req.query }, "Zettle callback missing code or state");
+        return res.redirect(`${dashboardUrl()}/dashboard?zettle_error=missing_params`);
+      }
+
+      let businessId: string;
+      try {
+        businessId = (
+          JSON.parse(Buffer.from(stateParam, "base64url").toString("utf8")) as { businessId: string }
+        ).businessId;
+      } catch {
+        logger.warn({ stateParam }, "Zettle callback invalid state param");
+        return res.redirect(`${dashboardUrl()}/dashboard?zettle_error=invalid_state`);
+      }
+
+      const tokenResponse = await fetch("https://oauth.zettle.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: process.env["ZETTLE_REDIRECT_URI"]!,
+          client_id: process.env["ZETTLE_CLIENT_ID"]!,
+          client_secret: process.env["ZETTLE_CLIENT_SECRET"]!,
+        }).toString(),
+      });
+
+      const tokenSet = (await tokenResponse.json()) as Record<string, unknown>;
+      if (!tokenSet["access_token"]) {
+        logger.error({ tokenSet, businessId }, "Zettle token exchange failed");
+        return res.redirect(`${dashboardUrl()}/dashboard?zettle_error=token_failed`);
+      }
+
+      const accessToken = String(tokenSet["access_token"]);
+
+      const { error: dbError } = await db
+        .from("businesses")
+        .update({
+          zettle_access_token: accessToken,
+          zettle_refresh_token:
+            typeof tokenSet["refresh_token"] === "string" ? tokenSet["refresh_token"] : null,
+          zettle_token_expiry:
+            typeof tokenSet["expires_in"] === "number"
+              ? new Date(Date.now() + (tokenSet["expires_in"] as number) * 1000).toISOString()
+              : null,
+        })
+        .eq("id", businessId);
+
+      if (dbError) {
+        logger.error({ dbError, businessId }, "Supabase update failed after Zettle connect");
+        return res.redirect(`${dashboardUrl()}/dashboard?zettle_error=db_failed`);
+      }
+
+      const webhookId = await registerZettleWebhook(accessToken, businessId).catch((err) => {
+        logger.warn({ err, businessId }, "Zettle webhook registration failed — skipping");
+        return null;
+      });
+
+      if (webhookId) {
+        await db
+          .from("businesses")
+          .update({ zettle_webhook_id: webhookId })
+          .eq("id", businessId)
+          .then(({ error }) => {
+            if (error) logger.warn({ error, businessId }, "failed to persist zettle_webhook_id");
+          });
+      }
+
+      logger.info({ businessId, webhookId }, "Zettle connected");
+      res.redirect(`${dashboardUrl()}/dashboard?zettle_connected=true`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── POST /auth/zettle/disconnect ─────────────────────────────────────────────
+
+router.post(
+  "/zettle/disconnect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.body?.business_id as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+
+      const { data: business } = await db
+        .from("businesses")
+        .select("zettle_access_token, zettle_refresh_token, zettle_token_expiry, zettle_webhook_id")
+        .eq("id", businessId)
+        .single();
+
+      if (business?.zettle_webhook_id && business.zettle_access_token) {
+        const accessToken = await resolveZettleToken(business as any).catch(() => null);
+        if (accessToken) {
+          await deleteZettleWebhook(accessToken, business.zettle_webhook_id).catch(() => {});
+        }
+      }
+
+      const { error } = await db
+        .from("businesses")
+        .update({
+          zettle_access_token: null,
+          zettle_refresh_token: null,
+          zettle_token_expiry: null,
+          zettle_webhook_id: null,
+        })
+        .eq("id", businessId);
+
+      if (error) {
+        logger.error({ error, businessId }, "Zettle disconnect DB update failed");
+        res.status(500).json({ error: error.message, code: "DB_ERROR" });
+        return;
+      }
+
+      logger.info({ businessId }, "Zettle disconnected");
       res.json({ ok: true });
     } catch (err) {
       next(err);

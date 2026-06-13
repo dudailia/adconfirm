@@ -12,6 +12,8 @@ import { validateShopifyWebhook } from "../middleware/validateShopifyWebhook";
 import { shopifyWebhookHandler } from "../adapters/shopify";
 import { validateSageWebhook } from "../middleware/validateSageWebhook";
 import { sageWebhookHandler } from "../adapters/sage";
+import { validateZettleWebhook } from "../middleware/validateZettleWebhook";
+import { zettleWebhookHandler } from "../adapters/zettle";
 
 const router = Router();
 
@@ -40,5 +42,6 @@ router.post(
 router.post("/square", express.raw({ type: "*/*" }), validateSquareWebhook, squareWebhookHandler);
 router.post("/shopify", express.raw({ type: "*/*" }), validateShopifyWebhook, shopifyWebhookHandler);
 router.post("/sage", express.raw({ type: "*/*" }), validateSageWebhook, sageWebhookHandler);
+router.post("/zettle", express.raw({ type: "*/*" }), validateZettleWebhook, zettleWebhookHandler);
 
 export default router;
