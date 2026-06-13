@@ -141,6 +141,8 @@ export interface Database {
           website_url: string;
           logo_url: string;
           stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          stripe_plan: string | null;
           created_at: string;
         };
         Insert: {
@@ -150,6 +152,8 @@ export interface Database {
           website_url: string;
           logo_url: string;
           stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          stripe_plan?: string | null;
           created_at?: string;
         };
         Update: {
@@ -159,6 +163,8 @@ export interface Database {
           website_url?: string;
           logo_url?: string;
           stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          stripe_plan?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -241,6 +247,7 @@ export interface Database {
           target_regions: string[];
           created_at: string;
           daily_budget_cents: number;
+          stripe_payment_status: string;
         };
         Insert: {
           id?: string;
@@ -255,6 +262,7 @@ export interface Database {
           target_regions?: string[];
           created_at?: string;
           daily_budget_cents?: number;
+          stripe_payment_status?: string;
         };
         Update: {
           id?: string;
@@ -269,6 +277,7 @@ export interface Database {
           target_regions?: string[];
           created_at?: string;
           daily_budget_cents?: number;
+          stripe_payment_status?: string;
         };
         Relationships: [
           {

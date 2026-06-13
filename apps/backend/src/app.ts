@@ -6,6 +6,7 @@ import healthRouter from "./routes/health";
 import webhooksRouter from "./routes/webhooks";
 import authRouter from "./routes/auth";
 import adminRouter from "./routes/admin";
+import stripeRouter from "./routes/stripe";
 import { errorHandler } from "./middleware/errorHandler";
 
 export function createApp() {
@@ -17,7 +18,7 @@ export function createApp() {
   // Parse JSON for all non-webhook routes
   // Webhook routes use express.raw() at the route level for HMAC verification
   app.use((req, _res, next) => {
-    if (req.path.startsWith("/webhooks")) {
+    if (req.path.startsWith("/webhooks") || req.path === "/stripe/webhook") {
       next();
     } else {
       express.json()(req, _res, next);
@@ -28,6 +29,7 @@ export function createApp() {
   app.use("/webhooks", webhooksRouter);
   app.use("/auth", authRouter);
   app.use("/admin", adminRouter);
+  app.use("/stripe", stripeRouter);
 
   app.use(errorHandler);
 
