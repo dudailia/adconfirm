@@ -26,7 +26,7 @@ const FAQ_ITEMS: AccordionItem[] = [
   {
     question: "How is revenue calculated for businesses?",
     answer:
-      "Businesses receive 70% of the CPM revenue generated from their invoices. If an advertiser bids £0.10 CPM, a business with 1,000 invoice impressions earns £0.07 × 1,000 = £70. The average CPM across all advertisers is approximately £0.08–0.12. Higher-value invoice audiences (e.g. law firms, accountancies) attract premium CPMs.",
+      "Businesses receive 70% of the revenue generated from ads placed on their invoices. Advertisers bid from £2 CPM, and high-intent purchase-moment placements typically clear well above that floor — so most businesses earn around £0.08 per placement. A business with 1,000 invoice impressions a month earns roughly £80. Higher-value audiences (e.g. law firms, accountancies) attract premium rates.",
   },
   {
     question: "How does CPM pricing work for advertisers?",
@@ -280,7 +280,7 @@ export function PricingPageContent() {
               ))}
             </div>
             <GlowButton
-              href="http://localhost:4000/auth/xero/connect"
+              href="https://adconfirm-dashboard.vercel.app/signup"
               variant="gold"
               className="w-full justify-center"
             >
@@ -335,7 +335,7 @@ export function PricingPageContent() {
                 marginBottom: 6,
               }}
             >
-              £0.10
+              £2
             </div>
             <div
               style={{
@@ -575,7 +575,7 @@ export function PricingPageContent() {
           <div
             style={{ marginTop: 52, display: "flex", gap: 12, flexWrap: "wrap" as const }}
           >
-            <GlowButton href="http://localhost:4000/auth/xero/connect" variant="primary">
+            <GlowButton href="https://adconfirm-dashboard.vercel.app/signup" variant="primary">
               Connect Xero Free →
             </GlowButton>
             <GlowButton href="/for-businesses" variant="ghost">

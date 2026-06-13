@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "AdConfirm Pricing — Free for Businesses, CPM for Advertisers",
     description:
-      "Free to join. 70% revenue share for businesses. £0.10 CPM for advertisers. No hidden fees, no lock-in.",
+      "Free to join. 70% revenue share for businesses. From £2 CPM for advertisers. No hidden fees, no lock-in.",
   },
 };
 

@@ -153,7 +153,7 @@ export function BusinessPageContent() {
             transition={{ delay: 0.5, duration: 0.5 }}
             style={{ display: "flex", gap: 12, flexWrap: "wrap" as const }}
           >
-            <GlowButton href="http://localhost:4000/auth/xero/connect" variant="primary">
+            <GlowButton href="https://adconfirm-dashboard.vercel.app/signup" variant="primary">
               Connect Xero — It&apos;s Free →
             </GlowButton>
             <GlowButton href="/how-it-works" variant="ghost">
@@ -521,7 +521,7 @@ export function BusinessPageContent() {
             >
               Connect Xero in 60 seconds. First placement free. Cancel anytime.
             </p>
-            <GlowButton href="http://localhost:4000/auth/xero/connect" variant="gold">
+            <GlowButton href="https://adconfirm-dashboard.vercel.app/signup" variant="gold">
               Connect Xero Free →
             </GlowButton>
           </SectionReveal>

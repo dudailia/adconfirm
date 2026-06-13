@@ -142,3 +142,72 @@ h1, h2, h3 { text-rendering: optimizeLegibility; }
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   ELEVATED LANDING — animation system
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Reduced motion: honour the OS setting everywhere. Framer Motion is handled
+   via <MotionConfig reducedMotion="user">; GSAP/RAF effects check in JS. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .mesh-blob,
+  .hero-lines line,
+  .marquee-track,
+  .ticker-inner,
+  .particle { animation: none !important; }
+}
+
+/* Hero mesh-gradient blobs — slow drift, offset phases (~18–22s) */
+@keyframes meshDriftA { 0%,100% { transform: translate3d(-8%,-6%,0) scale(1);    } 50% { transform: translate3d(12%,8%,0)   scale(1.25); } }
+@keyframes meshDriftB { 0%,100% { transform: translate3d(10%,4%,0)  scale(1.1);  } 50% { transform: translate3d(-12%,-8%,0) scale(0.95); } }
+@keyframes meshDriftC { 0%,100% { transform: translate3d(4%,10%,0)  scale(1);    } 50% { transform: translate3d(-10%,-4%,0) scale(1.2);  } }
+.mesh-blob { will-change: transform; }
+
+/* Hero background lines drifting left→right */
+@keyframes lineDrift { from { transform: translateX(-10%); } to { transform: translateX(10%); } }
+
+/* Integrations marquee — second row runs in reverse */
+@keyframes marqueeRev { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+.marquee-track { will-change: transform; }
+.marquee-row:hover .marquee-track { animation-play-state: paused; }
+
+/* Final-CTA particles rising upward */
+@keyframes floatUp {
+  0%   { transform: translateY(0) scale(0.5);    opacity: 0; }
+  12%  { opacity: 0.85; }
+  88%  { opacity: 0.85; }
+  100% { transform: translateY(-160px) scale(1); opacity: 0; }
+}
+.particle { will-change: transform, opacity; }
+
+/* Subtle CTA pulse (pricing / final) */
+@keyframes ctaPulse {
+  0%,100% { box-shadow: 0 0 20px rgba(0,82,255,0.40), 0 0 60px rgba(0,82,255,0.15); }
+  50%     { box-shadow: 0 0 32px rgba(0,82,255,0.65), 0 0 90px rgba(0,82,255,0.28); }
+}
+.cta-pulse { animation: ctaPulse 2.6s ease-in-out infinite; }
+
+/* Glassmorphism */
+.glass {
+  background: rgba(255,255,255,0.045);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.09);
+}
+
+/* New-section responsive grids */
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.proof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.tab-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: 1fr; gap: 16px; }
+  .proof-grid { grid-template-columns: 1fr; }
+  .tab-grid   { grid-template-columns: 1fr; gap: 32px; }
+}
+

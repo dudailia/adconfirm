@@ -1,39 +1,134 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { XERO_CONNECT_URL } from '../../lib/config';
+import { GlowButton } from "../ui/GlowButton";
+import { SIGNUP_URL } from "../../lib/config";
 
-export function FinalCTA() {
+const COLORS = ["rgba(0,82,255,0.85)", "rgba(0,194,255,0.7)", "rgba(201,168,76,0.6)"];
+
+// Deterministic pseudo-random so SSR and client markup match (no hydration drift).
+const PARTICLES = Array.from({ length: 24 }).map((_, i) => {
+  const r = (n: number) => (((i + 1) * n) % 100) / 100;
+  return {
+    left: Math.round(r(37) * 100),
+    top: Math.round(r(83) * 100),
+    size: 3 + Math.round(r(53) * 5),
+    delay: +(r(71) * 8).toFixed(2),
+    dur: +(7 + r(29) * 7).toFixed(2),
+    color: COLORS[i % COLORS.length],
+  };
+});
+
+export default function FinalCTA() {
   return (
-    <section className="py-24 px-6">
-      <div className="max-w-4xl mx-auto">
+    <section
+      data-section="final-cta"
+      style={{
+        position: "relative",
+        overflow: "hidden",
+        padding: "140px clamp(20px, 4vw, 80px) 160px",
+        textAlign: "center",
+        borderTop: "1px solid var(--border)",
+        background: "radial-gradient(ellipse 80% 70% at 50% 100%, #0A1428 0%, var(--bg) 70%)",
+      }}
+    >
+      {/* Animated gradient blobs */}
+      <div aria-hidden style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+        <div
+          className="mesh-blob"
+          style={{
+            position: "absolute",
+            bottom: "-30%",
+            left: "20%",
+            width: 560,
+            height: 560,
+            borderRadius: "50%",
+            filter: "blur(70px)",
+            background: "radial-gradient(circle, rgba(0,82,255,0.22) 0%, transparent 70%)",
+            animation: "meshDriftA 20s ease-in-out infinite",
+          }}
+        />
+        <div
+          className="mesh-blob"
+          style={{
+            position: "absolute",
+            bottom: "-20%",
+            right: "15%",
+            width: 480,
+            height: 480,
+            borderRadius: "50%",
+            filter: "blur(70px)",
+            background: "radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 72%)",
+            animation: "meshDriftC 26s ease-in-out infinite",
+          }}
+        />
+
+        {/* Rising particles */}
+        {PARTICLES.map((p, i) => (
+          <span
+            key={i}
+            className="particle"
+            style={{
+              position: "absolute",
+              left: `${p.left}%`,
+              top: `${p.top}%`,
+              width: p.size,
+              height: p.size,
+              borderRadius: "50%",
+              background: p.color,
+              boxShadow: `0 0 ${p.size * 2}px ${p.color}`,
+              animation: `floatUp ${p.dur}s linear ${p.delay}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 720, margin: "0 auto" }}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true, margin: "-80px" }}
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.6 }}
-          className="relative bg-[#0D1629] border border-white/[0.08] rounded-3xl p-12 md:p-16 text-center overflow-hidden"
         >
           <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(0,102,255,0.12) 0%, transparent 70%)" }}
-          />
-          <div className="relative">
-            <div className="text-xs font-mono text-[#0066FF] uppercase tracking-[0.2em] mb-4">Get Started</div>
-            <h2 className="font-serif text-4xl md:text-5xl text-white mb-4">
-              Ready to monetise your invoices?
-            </h2>
-            <p className="text-[#9AA5B4] mb-8 max-w-md mx-auto leading-relaxed">
-              Connect Xero in 60 seconds. First placement free. No credit card required.
-            </p>
-            <motion.a
-              href={XERO_CONNECT_URL}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-[#0066FF] text-white font-medium rounded-xl text-lg animate-glow-pulse"
-            >
-              Connect Your Xero →
-            </motion.a>
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              letterSpacing: "0.2em",
+              color: "var(--accent)",
+              textTransform: "uppercase",
+              marginBottom: 20,
+            }}
+          >
+            Get Started
+          </div>
+          <h2
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(38px, 5.5vw, 68px)",
+              color: "var(--text-1)",
+              lineHeight: 1.05,
+              marginBottom: 20,
+            }}
+          >
+            Ready to monetize your invoices?
+          </h2>
+          <p style={{ fontFamily: "var(--font-sans)", fontSize: 18, color: "var(--text-2)", marginBottom: 36, lineHeight: 1.6 }}>
+            Connect Xero in 60 seconds. First placement free. No credit card.
+          </p>
+          <GlowButton href={SIGNUP_URL} variant="primary" className="cta-pulse" style={{ padding: "16px 40px", fontSize: 16 }}>
+            Start earning today →
+          </GlowButton>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              color: "var(--text-3)",
+              marginTop: 22,
+              letterSpacing: "0.05em",
+            }}
+          >
+            SOC 2 in progress · GDPR compliant · UK-based
           </div>
         </motion.div>
       </div>

@@ -1,165 +1,222 @@
 "use client";
 
-import { useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { InvoiceMockup } from "../InvoiceMockup";
-import { XERO_CONNECT_URL } from '../../lib/config';
+import dynamic from "next/dynamic";
+import { GlowButton } from "../ui/GlowButton";
+import { LiveTimestamp } from "../ui/LiveTimestamp";
+import { SIGNUP_URL } from "../../lib/config";
+import MeshBackground from "./MeshBackground";
 
-const LINES = ["Your invoices.", "Now generating", "revenue."];
+const InvoiceMockup = dynamic(
+  () => import("../InvoiceMockup").then((m) => ({ default: m.InvoiceMockup })),
+  { ssr: false, loading: () => <div style={{ width: 400, height: 560 }} /> }
+);
 
-// Zero React re-renders — writes directly to DOM nodes every 60ms
-function TypewriterHeadline() {
-  const line1 = useRef<HTMLSpanElement>(null);
-  const line2 = useRef<HTMLSpanElement>(null);
-  const line3 = useRef<HTMLSpanElement>(null);
-  const cursor = useRef<HTMLSpanElement>(null);
+// Kinetic headline — each word fades + slides up, one by one.
+type Word = { t: string; italic?: boolean; gold?: boolean };
+const LINES: Word[][] = [
+  [{ t: "Your", italic: true }, { t: "invoices.", italic: true }],
+  [{ t: "Now" }, { t: "generating" }],
+  [{ t: "revenue.", italic: true, gold: true }],
+];
 
-  useEffect(() => {
-    const refs = [line1, line2, line3];
-    let lineIdx = 0;
-    let charIdx = 0;
+const EASE: [number, number, number, number] = [0.2, 0.65, 0.3, 0.9];
 
-    const tick = setInterval(() => {
-      const line = LINES[lineIdx];
-      if (!line) { clearInterval(tick); cursor.current && (cursor.current.style.display = "none"); return; }
-
-      charIdx++;
-      const ref = refs[lineIdx];
-      if (ref?.current) ref.current.textContent = line.slice(0, charIdx);
-
-      if (charIdx >= line.length) {
-        lineIdx++;
-        charIdx = 0;
-      }
-    }, 60);
-
-    return () => clearInterval(tick);
-  }, []);
+export default function Hero() {
+  let order = 0; // global word index → staggered entrance
 
   return (
-    <h1
+    <section
+      data-section="hero"
       style={{
-        fontFamily: "var(--font-display)",
-        fontSize: "clamp(48px, 6vw, 80px)",
-        lineHeight: 1.05,
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        position: "relative",
+        padding: "120px clamp(20px, 4vw, 80px) 80px",
+        background: "radial-gradient(ellipse 80% 60% at 50% 0%, #0A1020 0%, var(--bg) 70%)",
+        overflow: "hidden",
       }}
     >
-      <span ref={line1} style={{ display: "block", color: "var(--text-1)", fontStyle: "italic" }} />
-      <span ref={line2} style={{ display: "block", color: "var(--text-1)" }} />
-      <span
-        ref={line3}
-        style={{ display: "block", color: "var(--gold)", fontStyle: "italic" }}
-      />
-      <span
-        ref={cursor}
-        style={{ color: "var(--accent)", animation: "pulse 1s step-end infinite" }}
+      <MeshBackground />
+
+      <div
+        style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 1280, margin: "0 auto" }}
+        className="hero-grid"
       >
-        |
-      </span>
-    </h1>
-  );
-}
-
-export function Hero() {
-  return (
-    <section className="relative min-h-screen flex items-center pt-20 pb-16 px-6 overflow-hidden">
-      {/* Grid background */}
-      <div
-        className="absolute inset-0 opacity-100"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
-      {/* Top radial glow */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 0%, rgba(0,102,255,0.1) 0%, transparent 60%)",
-        }}
-      />
-
-      <div className="relative max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left */}
-          <div>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-xs font-mono text-[#0066FF] uppercase tracking-[0.2em] mb-6"
-            >
-              The Invoice Advertising Network
-            </motion.div>
-
-            <TypewriterHeadline />
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.9, duration: 0.6 }}
-              className="mt-6 text-lg text-[#9AA5B4] leading-relaxed max-w-lg"
-            >
-              AdConfirm places targeted ads on the invoices you already send. Your customers see offers from brands they care about. You earn per placement. Zero friction.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.1, duration: 0.6 }}
-              className="mt-8 flex flex-col sm:flex-row gap-3"
-            >
-              <motion.a
-                href={XERO_CONNECT_URL}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#0066FF] text-white font-medium rounded-xl animate-glow-pulse"
-              >
-                Start Earning Free
-              </motion.a>
-              <motion.a
-                href="#how-it-works"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-white/[0.1] text-white font-medium rounded-xl hover:border-white/20 transition-colors"
-              >
-                See How It Works
-              </motion.a>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.4, duration: 0.6 }}
-              className="mt-8 flex items-center gap-3"
-            >
-              <div className="flex -space-x-2">
-                {["#0066FF", "#0052CC", "#3385FF"].map((c, i) => (
-                  <div
-                    key={i}
-                    className="w-7 h-7 rounded-full border-2 border-[#050A14]"
-                    style={{ background: c }}
-                  />
-                ))}
-              </div>
-              <span className="text-sm text-[#9AA5B4]">
-                Trusted by businesses sending{" "}
-                <span className="text-white font-medium">10,000+ invoices/month</span>
-              </span>
-            </motion.div>
-          </div>
-
-          {/* Right — invoice mockup */}
+        {/* LEFT */}
+        <div>
+          {/* Eyebrow */}
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            className="flex justify-center lg:justify-end"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              border: "1px solid var(--border-glow)",
+              background: "rgba(0,82,255,0.08)",
+              borderRadius: 100,
+              padding: "6px 14px",
+              marginBottom: 28,
+            }}
           >
-            <InvoiceMockup />
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                letterSpacing: "0.15em",
+                color: "var(--accent-2)",
+                textTransform: "uppercase",
+              }}
+            >
+              ⬡ Invoice Advertising Network
+            </span>
           </motion.div>
+
+          {/* Kinetic H1 */}
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(48px, 6vw, 80px)",
+              lineHeight: 1.05,
+              marginBottom: 24,
+              fontWeight: 400,
+            }}
+          >
+            {LINES.map((line, li) => (
+              <span key={li} style={{ display: "block" }}>
+                {line.map((w) => {
+                  const delay = 0.18 + order * 0.075;
+                  order += 1;
+                  return (
+                    <motion.span
+                      key={w.t + delay}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay, duration: 0.6, ease: EASE }}
+                      style={{
+                        display: "inline-block",
+                        marginRight: "0.28em",
+                        fontStyle: w.italic ? "italic" : "normal",
+                        color: w.gold ? "var(--gold)" : "var(--text-1)",
+                        willChange: "transform, opacity",
+                      }}
+                    >
+                      {w.t}
+                    </motion.span>
+                  );
+                })}
+              </span>
+            ))}
+          </h1>
+
+          {/* Subheadline — fades in after the headline */}
+          <motion.p
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.95, duration: 0.7 }}
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: 18,
+              color: "var(--text-2)",
+              maxWidth: 480,
+              lineHeight: 1.7,
+              marginBottom: 36,
+            }}
+          >
+            AdConfirm places a targeted ad on every invoice you send — at the exact
+            millisecond of document generation. Your customers see offers from relevant
+            brands. You earn per placement. Nothing changes in your workflow.
+          </motion.p>
+
+          {/* CTAs */}
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.1, duration: 0.6 }}
+            style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 28 }}
+          >
+            <GlowButton href={SIGNUP_URL} variant="primary">
+              Start Free →
+            </GlowButton>
+            <GlowButton href="#how-it-works" variant="ghost">
+              See How It Works ↓
+            </GlowButton>
+          </motion.div>
+
+          {/* Social proof */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.3, duration: 0.6 }}
+            style={{ display: "flex", alignItems: "center", gap: 10 }}
+          >
+            <div style={{ display: "flex" }}>
+              {["MK", "RS", "TA"].map((initials, i) => (
+                <div
+                  key={initials}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: `hsl(${220 + i * 20}, 60%, 35%)`,
+                    border: "2px solid var(--bg)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 9,
+                    fontWeight: 600,
+                    color: "white",
+                    marginLeft: i === 0 ? 0 : -8,
+                  }}
+                >
+                  {initials}
+                </div>
+              ))}
+            </div>
+            <span style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text-3)" }}>
+              Join 94 businesses earning from invoices
+            </span>
+          </motion.div>
+
+          {/* Ambient timestamp */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.6 }}
+            style={{ marginTop: 48 }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                letterSpacing: "0.12em",
+                color: "var(--text-3)",
+                marginBottom: 4,
+                textTransform: "uppercase",
+              }}
+            >
+              Last injection at
+            </div>
+            <LiveTimestamp
+              style={{
+                fontSize: 32,
+                color: "var(--border)",
+                fontFamily: "var(--font-mono)",
+                letterSpacing: "0.05em",
+              }}
+            />
+          </motion.div>
+        </div>
+
+        {/* RIGHT — floating invoice mockup */}
+        <div
+          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+          className="hero-mockup-col flex justify-center"
+        >
+          <InvoiceMockup />
         </div>
       </div>
     </section>

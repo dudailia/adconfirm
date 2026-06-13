@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { GlowButton } from "./ui/GlowButton";
+import { SIGNUP_URL, LOGIN_URL } from "../lib/config";
 
 const NAV_LINKS = [
   { label: "How It Works", href: "/#how-it-works" },
@@ -115,7 +116,7 @@ export function NavigationBar() {
           className="hidden lg:flex"
         >
           <Link
-            href="/login"
+            href={LOGIN_URL}
             style={{
               fontFamily: "var(--font-sans)",
               fontSize: 14,
@@ -130,7 +131,7 @@ export function NavigationBar() {
           >
             Log In
           </Link>
-          <GlowButton href="/for-businesses" variant="primary">
+          <GlowButton href={SIGNUP_URL} variant="primary">
             Get Started →
           </GlowButton>
         </div>

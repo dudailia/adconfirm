@@ -131,7 +131,7 @@ export function FooterBar() {
             color: "var(--text-3)",
           }}
         >
-          © 2024 AdConfirm Ltd. Registered in England and Wales.
+          © 2026 AdConfirm Ltd. Registered in England and Wales.
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span

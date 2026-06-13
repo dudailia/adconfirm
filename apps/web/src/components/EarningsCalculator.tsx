@@ -170,7 +170,7 @@ export function EarningsCalculator() {
           paddingTop: 16,
         }}
       >
-        Based on avg £0.08 CPM rate. Higher-value B2B invoices earn more.
+        Based on ~£0.08 earned per invoice. Higher-value B2B invoices earn more.
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 const ITEMS = [
   "✦ 847,291 ads served today",
-  "✦ £0.08 avg CPM",
+  "✦ Advertisers from £2 CPM",
   "✦ 2.1ms avg injection time",
   "✦ 12,400 invoices processed this week",
   "✦ 94 businesses connected",

@@ -453,7 +453,7 @@ export function HowItWorksContent() {
           <Accordion items={OBJECTIONS} />
 
           <div style={{ marginTop: 56, display: "flex", gap: 12, flexWrap: "wrap" as const }}>
-            <GlowButton href="http://localhost:4000/auth/xero/connect" variant="primary">
+            <GlowButton href="https://adconfirm-dashboard.vercel.app/signup" variant="primary">
               Connect Xero — Start Earning
             </GlowButton>
             <GlowButton href="/for-businesses" variant="ghost">
