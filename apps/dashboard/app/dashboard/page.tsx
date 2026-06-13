@@ -34,7 +34,7 @@ const SQUARE_ERROR_MESSAGES: Record<string, string> = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { connected?: string; xero_error?: string; qbo_connected?: string; qbo_error?: string; square_connected?: string; square_error?: string; fa_connected?: string; fa_error?: string }
+  searchParams: { connected?: string; xero_error?: string; qbo_connected?: string; qbo_error?: string; square_connected?: string; square_error?: string; fa_connected?: string; fa_error?: string; sage_connected?: string; sage_error?: string }
 }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -54,6 +54,8 @@ export default async function DashboardPage({
     fa_access_token?: string | null
     square_merchant_id?: string | null
     square_access_token?: string | null
+    sage_access_token?: string | null
+    sage_business_id?: string | null
   } | null = null
 
   // Core select excludes qbo_* so the dashboard never hard-breaks if the
@@ -84,7 +86,7 @@ export default async function DashboardPage({
   if (business) {
     const { data: extra } = await supabase
       .from('businesses')
-      .select('qbo_realm_id, qbo_access_token, fa_access_token, square_merchant_id, square_access_token')
+      .select('qbo_realm_id, qbo_access_token, fa_access_token, square_merchant_id, square_access_token, sage_access_token, sage_business_id')
       .eq('id', business.id)
       .maybeSingle()
     if (extra) {
@@ -93,6 +95,8 @@ export default async function DashboardPage({
       business.fa_access_token = (extra as any).fa_access_token ?? null
       business.square_merchant_id = (extra as any).square_merchant_id ?? null
       business.square_access_token = (extra as any).square_access_token ?? null
+      business.sage_access_token = (extra as any).sage_access_token ?? null
+      business.sage_business_id = (extra as any).sage_business_id ?? null
     }
   }
 
@@ -100,11 +104,13 @@ export default async function DashboardPage({
   const qboConnected    = business?.qbo_realm_id != null && business?.qbo_access_token != null
   const faConnected     = business?.fa_access_token != null
   const squareConnected = business?.square_merchant_id != null && business?.square_access_token != null
+  const sageConnected   = business?.sage_access_token != null
 
   const connectXeroUrl   = business?.id ? `${API_URL}/auth/xero/connect?business_id=${encodeURIComponent(business.id)}`   : null
   const connectQBOUrl    = business?.id ? `${API_URL}/auth/qbo/connect?business_id=${encodeURIComponent(business.id)}`    : null
   const connectFAUrl     = business?.id ? `${API_URL}/auth/freeagent/connect?business_id=${encodeURIComponent(business.id)}` : null
   const connectSquareUrl = business?.id ? `${API_URL}/auth/square/connect?business_id=${encodeURIComponent(business.id)}`  : null
+  const connectSageUrl   = business?.id ? `${API_URL}/auth/sage/connect?business_id=${encodeURIComponent(business.id)}`   : null
 
   // Receipt counts — total + per channel
   const { count: receiptCount } = business
@@ -143,11 +149,16 @@ export default async function DashboardPage({
   const qboJustConnected    = searchParams.qbo_connected === 'true'
   const faJustConnected     = searchParams.fa_connected === 'true'
   const squareJustConnected = searchParams.square_connected === 'true'
+  const sageJustConnected   = searchParams.sage_connected === 'true'
   const xeroError   = searchParams.xero_error   ? (XERO_ERROR_MESSAGES[searchParams.xero_error]     ?? 'Something went wrong connecting Xero.')    : null
   const qboError    = searchParams.qbo_error    ? (QBO_ERROR_MESSAGES[searchParams.qbo_error]        ?? 'Something went wrong connecting QuickBooks.') : null
   const squareError = searchParams.square_error ? (SQUARE_ERROR_MESSAGES[searchParams.square_error] ?? 'Something went wrong connecting Square.')   : null
 
-  const hasChannelBreakdown = (xeroReceiptCount ?? 0) + (eposReceiptCount ?? 0) + (qboReceiptCount ?? 0) + (squareReceiptCount ?? 0) > 0
+  const { count: sageReceiptCount } = business
+    ? await supabase.from('receipts').select('*', { count: 'exact', head: true }).eq('business_id', business.id).eq('channel', 'sage')
+    : { count: 0 }
+
+  const hasChannelBreakdown = (xeroReceiptCount ?? 0) + (eposReceiptCount ?? 0) + (qboReceiptCount ?? 0) + (squareReceiptCount ?? 0) + (sageReceiptCount ?? 0) > 0
 
   return (
     <div style={{minHeight:'100vh',background:'#04070F',color:'white',padding:'40px',fontFamily:'system-ui'}}>
@@ -182,6 +193,11 @@ export default async function DashboardPage({
           ✓ Square connected successfully. Your receipts will now be processed automatically.
         </div>
       )}
+      {sageJustConnected && (
+        <div style={{marginBottom:'20px',padding:'12px 16px',background:'#0D1A0D',border:'1px solid #1A3D1A',borderRadius:'8px',color:'#00E5A0',fontSize:'13px'}}>
+          ✓ Sage Business Cloud connected successfully. Your invoices will now be processed automatically.
+        </div>
+      )}
       {xeroError && (
         <div style={{marginBottom:'20px',padding:'12px 16px',background:'#1A0D0D',border:'1px solid #3D1515',borderRadius:'8px',color:'#FF9090',fontSize:'13px'}}>
           {xeroError}
@@ -210,7 +226,7 @@ export default async function DashboardPage({
           <p style={{fontSize:'32px',fontWeight:'bold',color:'#F0F4FF'}}>{receiptCount ?? 0}</p>
           {hasChannelBreakdown && (
             <p style={{color:'#8A9BC4',fontSize:'11px',marginTop:'6px'}}>
-              Xero: {xeroReceiptCount ?? 0} · QBO: {qboReceiptCount ?? 0} · Epos Now: {eposReceiptCount ?? 0} · Square: {squareReceiptCount ?? 0}
+              Xero: {xeroReceiptCount ?? 0} · QBO: {qboReceiptCount ?? 0} · Epos Now: {eposReceiptCount ?? 0} · Square: {squareReceiptCount ?? 0} · Sage: {sageReceiptCount ?? 0}
             </p>
           )}
         </div>
@@ -235,6 +251,9 @@ export default async function DashboardPage({
             </span>
             <span style={{fontSize:'12px',color: squareConnected ? '#00E5A0' : '#4A5568'}}>
               {squareConnected ? '✓' : '○'} Square
+            </span>
+            <span style={{fontSize:'12px',color: sageConnected ? '#00E5A0' : '#4A5568'}}>
+              {sageConnected ? '✓' : '○'} Sage
             </span>
           </div>
           {lastSync && (
@@ -358,6 +377,32 @@ export default async function DashboardPage({
             </div>
           )}
           {!squareConnected && !connectSquareUrl && (
+            <span style={{color:'#4A5568',fontSize:'12px'}}>No business profile</span>
+          )}
+        </div>
+
+        {/* Sage Business Cloud */}
+        <div style={{background:'#0D1629',padding:'24px',borderRadius:'12px',border:'1px solid #1A2540'}}>
+          <p style={{color:'#8A9BC4',fontSize:'14px',marginBottom:'12px'}}>Sage Business Cloud</p>
+          {!sageConnected && connectSageUrl && (
+            <a href={connectSageUrl} style={{display:'inline-block',padding:'8px 18px',background:'#00DC82',color:'#04070F',borderRadius:'6px',textDecoration:'none',fontSize:'13px',fontWeight:600}}>
+              Connect Sage
+            </a>
+          )}
+          {sageConnected && business && (
+            <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+              <span style={{display:'inline-block',padding:'8px 14px',background:'#0D1629',color:'#00E5A0',borderRadius:'6px',fontSize:'13px',border:'1px solid #00E5A0'}}>
+                Connected ✓
+              </span>
+              <form method="POST" action={`${API_URL}/auth/sage/disconnect`} style={{display:'inline'}}>
+                <input type="hidden" name="business_id" value={business.id} />
+                <button type="submit" style={{padding:'8px 14px',background:'#1A0D0D',color:'#FF9090',borderRadius:'6px',fontSize:'13px',border:'1px solid #3D1515',cursor:'pointer'}}>
+                  Disconnect
+                </button>
+              </form>
+            </div>
+          )}
+          {!sageConnected && !connectSageUrl && (
             <span style={{color:'#4A5568',fontSize:'12px'}}>No business profile</span>
           )}
         </div>

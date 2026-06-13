@@ -5,6 +5,7 @@ import { logger } from "../modules/logger";
 import { registerFAWebhook, deleteFAWebhook, resolveFAAccessToken } from "../adapters/freeagent";
 import { registerSquareWebhook, deleteSquareWebhook, resolveSquareToken } from "../adapters/square";
 import { registerShopifyWebhook, deleteShopifyWebhook } from "../adapters/shopify";
+import { registerSageWebhook, deleteSageWebhook, resolveSageToken } from "../adapters/sage";
 
 const router = Router();
 
@@ -841,6 +842,176 @@ router.post(
       }
 
       logger.info({ businessId }, "Shopify disconnected");
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/sage/connect ───────────────────────────────────────────────────
+
+router.get(
+  "/sage/connect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.query["business_id"] as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: process.env["SAGE_CLIENT_ID"]!,
+        redirect_uri: process.env["SAGE_REDIRECT_URI"]!,
+        scope: "full_access",
+        state: businessId,
+      });
+      logger.info({ businessId }, "redirecting to Sage consent URL");
+      res.redirect(`https://www.sageone.com/oauth2/auth/central?${params}`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/sage/callback ──────────────────────────────────────────────────
+
+router.get(
+  "/sage/callback",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.query["error"]) {
+        logger.warn({ sageError: req.query["error"] }, "Sage OAuth denied by user");
+        return res.redirect(`${dashboardUrl()}/dashboard?sage_error=access_denied`);
+      }
+
+      const code = req.query["code"] as string | undefined;
+      const businessId = req.query["state"] as string | undefined;
+      if (!code || !businessId) {
+        logger.warn({ query: req.query }, "Sage callback missing code or state");
+        return res.redirect(`${dashboardUrl()}/dashboard?sage_error=missing_params`);
+      }
+
+      const tokenResponse = await fetch("https://oauth.accounting.sage.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: process.env["SAGE_REDIRECT_URI"]!,
+          client_id: process.env["SAGE_CLIENT_ID"]!,
+          client_secret: process.env["SAGE_CLIENT_SECRET"]!,
+        }).toString(),
+      });
+
+      const tokenSet = (await tokenResponse.json()) as Record<string, unknown>;
+      if (!tokenSet["access_token"]) {
+        logger.error({ tokenSet, businessId }, "Sage token exchange failed");
+        return res.redirect(`${dashboardUrl()}/dashboard?sage_error=token_failed`);
+      }
+
+      const accessToken = String(tokenSet["access_token"]);
+
+      // Fetch the connected Sage business id
+      let sageBusinessId: string | null = null;
+      try {
+        const bizRes = await fetch("https://api.accounting.sage.com/v3.1/business", {
+          headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+        });
+        if (bizRes.ok) {
+          const bizBody = (await bizRes.json()) as any;
+          sageBusinessId = bizBody?.id ?? bizBody?.business?.id ?? null;
+        }
+      } catch {
+        // non-fatal
+      }
+
+      const { error: dbError } = await db
+        .from("businesses")
+        .update({
+          sage_access_token: accessToken,
+          sage_refresh_token:
+            typeof tokenSet["refresh_token"] === "string" ? tokenSet["refresh_token"] : null,
+          sage_token_expiry:
+            typeof tokenSet["expires_in"] === "number"
+              ? new Date(Date.now() + (tokenSet["expires_in"] as number) * 1000).toISOString()
+              : null,
+          sage_business_id: sageBusinessId,
+        })
+        .eq("id", businessId);
+
+      if (dbError) {
+        logger.error({ dbError, businessId }, "Supabase update failed after Sage connect");
+        return res.redirect(`${dashboardUrl()}/dashboard?sage_error=db_failed`);
+      }
+
+      const webhookId = await registerSageWebhook(accessToken, businessId).catch((err) => {
+        logger.warn({ err, businessId }, "Sage webhook registration failed — skipping");
+        return null;
+      });
+
+      if (webhookId) {
+        await db
+          .from("businesses")
+          .update({ sage_webhook_id: webhookId })
+          .eq("id", businessId)
+          .then(({ error }) => {
+            if (error) logger.warn({ error, businessId }, "failed to persist sage_webhook_id");
+          });
+      }
+
+      logger.info({ businessId, sageBusinessId, webhookId }, "Sage connected");
+      res.redirect(`${dashboardUrl()}/dashboard?sage_connected=true`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── POST /auth/sage/disconnect ───────────────────────────────────────────────
+
+router.post(
+  "/sage/disconnect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.body?.business_id as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+
+      const { data: business } = await db
+        .from("businesses")
+        .select("sage_access_token, sage_refresh_token, sage_token_expiry, sage_webhook_id")
+        .eq("id", businessId)
+        .single();
+
+      if (business?.sage_webhook_id && business.sage_access_token) {
+        const accessToken = await resolveSageToken(business as any).catch(() => null);
+        if (accessToken) {
+          await deleteSageWebhook(accessToken, business.sage_webhook_id).catch(() => {});
+        }
+      }
+
+      const { error } = await db
+        .from("businesses")
+        .update({
+          sage_access_token: null,
+          sage_refresh_token: null,
+          sage_token_expiry: null,
+          sage_business_id: null,
+          sage_webhook_id: null,
+        })
+        .eq("id", businessId);
+
+      if (error) {
+        logger.error({ error, businessId }, "Sage disconnect DB update failed");
+        res.status(500).json({ error: error.message, code: "DB_ERROR" });
+        return;
+      }
+
+      logger.info({ businessId }, "Sage disconnected");
       res.json({ ok: true });
     } catch (err) {
       next(err);
