@@ -193,7 +193,7 @@ export async function squareWebhookHandler(req: Request, res: Response): Promise
         invoiceNumber: (payment["receipt_number"] as string | undefined) ?? (payment["id"] as string | undefined) ?? "unknown",
         total: typeof amountMoney["amount"] === "number" ? (amountMoney["amount"] as number) / 100 : 0,
         currency: (amountMoney["currency"] as string | undefined) ?? "USD",
-        date: new Date().toISOString().split("T")[0],
+        date: new Date().toISOString().split("T")[0] ?? new Date().toISOString(),
         customerEmail: (payment["buyer_email_address"] as string | undefined) ?? null,
         contactName: "",
         lineItems: [],
