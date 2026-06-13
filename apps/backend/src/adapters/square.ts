@@ -189,7 +189,7 @@ export async function squareWebhookHandler(req: Request, res: Response): Promise
       business,
       {
         invoiceNumber: (payment["receipt_number"] as string | undefined) ?? (payment["id"] as string | undefined) ?? "unknown",
-        amount: typeof amountMoney["amount"] === "number" ? (amountMoney["amount"] as number) / 100 : 0,
+        total: typeof amountMoney["amount"] === "number" ? (amountMoney["amount"] as number) / 100 : 0,
         customerEmail: (payment["buyer_email_address"] as string | undefined) ?? null,
         customerName: "",
       },
