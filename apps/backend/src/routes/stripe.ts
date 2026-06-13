@@ -8,7 +8,7 @@ import { logger } from "../modules/logger";
 const router = Router();
 
 function stripe(): Stripe {
-  return new Stripe(process.env["STRIPE_SECRET_KEY"]!, { apiVersion: "2025-05-28.basil" });
+  return new Stripe(process.env["STRIPE_SECRET_KEY"]!, { apiVersion: "2025-02-24.acacia" });
 }
 
 function dashboardUrl(): string {

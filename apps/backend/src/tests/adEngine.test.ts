@@ -36,6 +36,7 @@ const activeCampaign: CampaignWithCreatives = {
   target_industries: ["retail"],
   target_regions: ["US"],
   created_at: "2026-01-01T00:00:00Z",
+  stripe_payment_status: "unpaid",
   ad_creatives: [creative],
 };
 
