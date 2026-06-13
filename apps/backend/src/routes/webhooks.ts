@@ -6,6 +6,8 @@ import { validateQBOWebhook } from "../middleware/validateQBOWebhook";
 import { qboWebhookHandler } from "../adapters/quickbooks";
 import { validateFreeAgentWebhook } from "../middleware/validateFreeAgentWebhook";
 import { faWebhookHandler } from "../adapters/freeagent";
+import { validateSquareWebhook } from "../middleware/validateSquareWebhook";
+import { squareWebhookHandler } from "../adapters/square";
 
 const router = Router();
 
@@ -30,5 +32,7 @@ router.post(
   validateFreeAgentWebhook,
   faWebhookHandler
 );
+
+router.post("/square", express.raw({ type: "*/*" }), validateSquareWebhook, squareWebhookHandler);
 
 export default router;

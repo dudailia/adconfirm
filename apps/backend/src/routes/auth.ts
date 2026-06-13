@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import { db } from "../modules/db";
 import { logger } from "../modules/logger";
 import { registerFAWebhook, deleteFAWebhook, resolveFAAccessToken } from "../adapters/freeagent";
+import { registerSquareWebhook, deleteSquareWebhook, resolveSquareToken } from "../adapters/square";
 
 const router = Router();
 
@@ -482,6 +483,199 @@ router.post(
       }
 
       logger.info({ businessId }, "FreeAgent disconnected");
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/square/connect ─────────────────────────────────────────────────
+
+router.get(
+  "/square/connect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.query["business_id"] as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+      const state = Buffer.from(JSON.stringify({ businessId })).toString("base64url");
+      const params = new URLSearchParams({
+        client_id: process.env["SQUARE_APP_ID"]!,
+        scope: "MERCHANT_PROFILE_READ PAYMENTS_READ ORDERS_READ CUSTOMERS_READ",
+        redirect_uri: process.env["SQUARE_REDIRECT_URI"]!,
+        response_type: "code",
+        state,
+        session: "false",
+      });
+      logger.info({ businessId }, "redirecting to Square consent URL");
+      res.redirect(`https://connect.squareup.com/oauth2/authorize?${params}`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/square/callback ────────────────────────────────────────────────
+
+router.get(
+  "/square/callback",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.query["error"]) {
+        logger.warn({ squareError: req.query["error"] }, "Square OAuth denied by user");
+        return res.redirect(`${dashboardUrl()}/dashboard?square_error=access_denied`);
+      }
+
+      const code = req.query["code"] as string | undefined;
+      const stateParam = req.query["state"] as string | undefined;
+      if (!code || !stateParam) {
+        logger.warn({ query: req.query }, "Square callback missing code or state");
+        return res.redirect(`${dashboardUrl()}/dashboard?square_error=missing_params`);
+      }
+
+      let businessId: string;
+      try {
+        businessId = (
+          JSON.parse(Buffer.from(stateParam, "base64url").toString("utf8")) as { businessId: string }
+        ).businessId;
+      } catch {
+        logger.warn({ stateParam }, "Square callback invalid state param");
+        return res.redirect(`${dashboardUrl()}/dashboard?square_error=invalid_state`);
+      }
+
+      const tokenResponse = await fetch("https://connect.squareup.com/oauth2/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Basic " +
+            Buffer.from(`${process.env["SQUARE_APP_ID"]!}:${process.env["SQUARE_APP_SECRET"]!}`).toString("base64"),
+        },
+        body: JSON.stringify({
+          client_id: process.env["SQUARE_APP_ID"]!,
+          client_secret: process.env["SQUARE_APP_SECRET"]!,
+          code,
+          grant_type: "authorization_code",
+          redirect_uri: process.env["SQUARE_REDIRECT_URI"]!,
+        }),
+      });
+
+      const tokenSet = (await tokenResponse.json()) as Record<string, unknown>;
+      if (!tokenSet["access_token"]) {
+        logger.error({ tokenSet, businessId }, "Square token exchange failed");
+        return res.redirect(`${dashboardUrl()}/dashboard?square_error=token_failed`);
+      }
+
+      const accessToken = String(tokenSet["access_token"]);
+      const merchantId = typeof tokenSet["merchant_id"] === "string" ? tokenSet["merchant_id"] : null;
+
+      const { error: dbError } = await db
+        .from("businesses")
+        .update({
+          square_merchant_id: merchantId,
+          square_access_token: accessToken,
+          square_refresh_token:
+            typeof tokenSet["refresh_token"] === "string" ? tokenSet["refresh_token"] : null,
+          square_token_expiry:
+            typeof tokenSet["expires_at"] === "string"
+              ? tokenSet["expires_at"]
+              : typeof tokenSet["expires_in"] === "number"
+                ? new Date(Date.now() + (tokenSet["expires_in"] as number) * 1000).toISOString()
+                : null,
+        })
+        .eq("id", businessId);
+
+      if (dbError) {
+        logger.error({ dbError, businessId }, "Supabase update failed after Square connect");
+        return res.redirect(`${dashboardUrl()}/dashboard?square_error=db_failed`);
+      }
+
+      const subscriptionId = await registerSquareWebhook(accessToken, businessId).catch((err) => {
+        logger.warn({ err, businessId }, "Square webhook registration failed — skipping");
+        return null;
+      });
+
+      if (subscriptionId) {
+        await db
+          .from("businesses")
+          .update({ square_webhook_id: subscriptionId })
+          .eq("id", businessId)
+          .then(({ error }) => {
+            if (error) logger.warn({ error, businessId }, "failed to persist square_webhook_id");
+          });
+      }
+
+      logger.info({ businessId, merchantId, subscriptionId }, "Square connected");
+      res.redirect(`${dashboardUrl()}/dashboard?square_connected=true`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── POST /auth/square/disconnect ─────────────────────────────────────────────
+
+router.post(
+  "/square/disconnect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.body?.business_id as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+
+      const { data: business } = await db
+        .from("businesses")
+        .select("square_access_token, square_refresh_token, square_token_expiry, square_webhook_id, square_merchant_id")
+        .eq("id", businessId)
+        .single();
+
+      if (business?.square_webhook_id && business.square_access_token) {
+        const accessToken = await resolveSquareToken(business as any).catch(() => null);
+        if (accessToken) {
+          await deleteSquareWebhook(accessToken, business.square_webhook_id).catch(() => {});
+        }
+      }
+
+      if (business?.square_access_token) {
+        await fetch("https://connect.squareup.com/oauth2/revoke", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization:
+              "Basic " +
+              Buffer.from(`${process.env["SQUARE_APP_ID"]!}:${process.env["SQUARE_APP_SECRET"]!}`).toString("base64"),
+          },
+          body: JSON.stringify({
+            client_id: process.env["SQUARE_APP_ID"]!,
+            access_token: business.square_access_token,
+            revoke_only_access_token: false,
+          }),
+        }).catch((err) => logger.warn({ err, businessId }, "Square token revoke request failed"));
+      }
+
+      const { error } = await db
+        .from("businesses")
+        .update({
+          square_merchant_id: null,
+          square_access_token: null,
+          square_refresh_token: null,
+          square_token_expiry: null,
+          square_webhook_id: null,
+        })
+        .eq("id", businessId);
+
+      if (error) {
+        logger.error({ error, businessId }, "Square disconnect DB update failed");
+        res.status(500).json({ error: error.message, code: "DB_ERROR" });
+        return;
+      }
+
+      logger.info({ businessId }, "Square disconnected");
       res.json({ ok: true });
     } catch (err) {
       next(err);
