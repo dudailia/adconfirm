@@ -35,6 +35,9 @@ export interface Database {
           square_refresh_token: string | null;
           square_token_expiry: string | null;
           square_webhook_id: string | null;
+          shopify_shop: string | null;
+          shopify_access_token: string | null;
+          shopify_webhook_id: string | null;
           stripe_customer_id: string | null;
           plan: string;
         };
@@ -63,6 +66,9 @@ export interface Database {
           square_refresh_token?: string | null;
           square_token_expiry?: string | null;
           square_webhook_id?: string | null;
+          shopify_shop?: string | null;
+          shopify_access_token?: string | null;
+          shopify_webhook_id?: string | null;
           stripe_customer_id?: string | null;
           plan?: string;
         };
@@ -91,6 +97,9 @@ export interface Database {
           square_refresh_token?: string | null;
           square_token_expiry?: string | null;
           square_webhook_id?: string | null;
+          shopify_shop?: string | null;
+          shopify_access_token?: string | null;
+          shopify_webhook_id?: string | null;
           stripe_customer_id?: string | null;
           plan?: string;
         };

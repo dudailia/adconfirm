@@ -95,7 +95,7 @@ export async function shopifyWebhookHandler(req: Request, res: Response): Promis
     payloadObj = { raw: (req.body as Buffer).toString("utf8") };
   }
 
-  const webhookEvent = await insertWebhookEvent("shopify" as any, payloadObj).catch((err) => {
+  const webhookEvent = await insertWebhookEvent("shopify", payloadObj).catch((err) => {
     logger.warn({ err }, "webhook_events insert failed for Shopify — continuing");
     return null;
   });
@@ -133,6 +133,7 @@ export async function shopifyWebhookHandler(req: Request, res: Response): Promis
           description: String(li["title"] ?? ""),
           quantity: Number(li["quantity"] ?? 1),
           unitAmount: Number(li["price"] ?? 0),
+          lineAmount: Number(li["quantity"] ?? 1) * Number(li["price"] ?? 0),
         }))
       : [];
 
@@ -156,7 +157,7 @@ export async function shopifyWebhookHandler(req: Request, res: Response): Promis
         contactName: [firstName, lastName].filter(Boolean).join(" "),
         lineItems,
       },
-      "shopify" as any
+      "shopify"
     );
   } catch (err) {
     errorMsg = err instanceof Error ? err.message : String(err);
