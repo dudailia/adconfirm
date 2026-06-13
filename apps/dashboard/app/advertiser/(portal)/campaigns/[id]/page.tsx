@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getAdvertiserForUser, getPlacementIdsForCampaign } from "@/lib/advertiser";
 import type { Database } from "@adconfirm/db";
+import FundCampaignButton from "./FundCampaignButton";
 
 type CampaignRow = Database["public"]["Tables"]["ad_campaigns"]["Row"];
 type EventRow = Database["public"]["Tables"]["ad_events"]["Row"];
@@ -116,6 +117,13 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
           </p>
         </div>
       </section>
+
+      <FundCampaignButton
+        advertiserId={campaign.advertiser_id}
+        campaignId={campaign.id}
+        dailyBudgetCents={campaign.daily_budget_cents}
+        paymentStatus={campaign.stripe_payment_status ?? "unpaid"}
+      />
 
       <section className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-surface p-5">
