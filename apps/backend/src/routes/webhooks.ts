@@ -8,6 +8,8 @@ import { validateFreeAgentWebhook } from "../middleware/validateFreeAgentWebhook
 import { faWebhookHandler } from "../adapters/freeagent";
 import { validateSquareWebhook } from "../middleware/validateSquareWebhook";
 import { squareWebhookHandler } from "../adapters/square";
+import { validateShopifyWebhook } from "../middleware/validateShopifyWebhook";
+import { shopifyWebhookHandler } from "../adapters/shopify";
 
 const router = Router();
 
@@ -34,5 +36,6 @@ router.post(
 );
 
 router.post("/square", express.raw({ type: "*/*" }), validateSquareWebhook, squareWebhookHandler);
+router.post("/shopify", express.raw({ type: "*/*" }), validateShopifyWebhook, shopifyWebhookHandler);
 
 export default router;

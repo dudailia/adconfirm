@@ -4,6 +4,7 @@ import { db } from "../modules/db";
 import { logger } from "../modules/logger";
 import { registerFAWebhook, deleteFAWebhook, resolveFAAccessToken } from "../adapters/freeagent";
 import { registerSquareWebhook, deleteSquareWebhook, resolveSquareToken } from "../adapters/square";
+import { registerShopifyWebhook, deleteShopifyWebhook } from "../adapters/shopify";
 
 const router = Router();
 
@@ -676,6 +677,170 @@ router.post(
       }
 
       logger.info({ businessId }, "Square disconnected");
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/shopify/connect ────────────────────────────────────────────────
+// Shopify OAuth begins with the merchant's myshopify.com domain
+
+router.get(
+  "/shopify/connect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.query["business_id"] as string | undefined;
+      const shop = req.query["shop"] as string | undefined;
+      if (!businessId || !shop) {
+        res.status(400).json({ error: "business_id and shop are required", code: "MISSING_PARAMS" });
+        return;
+      }
+      const cleanShop = shop.replace(/https?:\/\//, "").replace(/\/$/, "");
+      const state = Buffer.from(JSON.stringify({ businessId, shop: cleanShop })).toString("base64url");
+      const params = new URLSearchParams({
+        client_id: process.env["SHOPIFY_API_KEY"]!,
+        scope: "read_orders,read_customers",
+        redirect_uri: process.env["SHOPIFY_REDIRECT_URI"]!,
+        state,
+      });
+      logger.info({ businessId, shop: cleanShop }, "redirecting to Shopify consent URL");
+      res.redirect(`https://${cleanShop}/admin/oauth/authorize?${params}`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── GET /auth/shopify/callback ───────────────────────────────────────────────
+
+router.get(
+  "/shopify/callback",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.query["error"]) {
+        logger.warn({ shopifyError: req.query["error"] }, "Shopify OAuth denied by user");
+        return res.redirect(`${dashboardUrl()}/dashboard?shopify_error=access_denied`);
+      }
+
+      const code = req.query["code"] as string | undefined;
+      const stateParam = req.query["state"] as string | undefined;
+      if (!code || !stateParam) {
+        logger.warn({ query: req.query }, "Shopify callback missing code or state");
+        return res.redirect(`${dashboardUrl()}/dashboard?shopify_error=missing_params`);
+      }
+
+      let businessId: string;
+      let shop: string;
+      try {
+        const parsed = JSON.parse(Buffer.from(stateParam, "base64url").toString("utf8")) as {
+          businessId: string;
+          shop: string;
+        };
+        businessId = parsed.businessId;
+        shop = parsed.shop;
+      } catch {
+        logger.warn({ stateParam }, "Shopify callback invalid state param");
+        return res.redirect(`${dashboardUrl()}/dashboard?shopify_error=invalid_state`);
+      }
+
+      const tokenResponse = await fetch(`https://${shop}/admin/oauth/access_token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: process.env["SHOPIFY_API_KEY"]!,
+          client_secret: process.env["SHOPIFY_API_SECRET"]!,
+          code,
+        }),
+      });
+
+      const tokenSet = (await tokenResponse.json()) as Record<string, unknown>;
+      if (!tokenSet["access_token"]) {
+        logger.error({ tokenSet, businessId, shop }, "Shopify token exchange failed");
+        return res.redirect(`${dashboardUrl()}/dashboard?shopify_error=token_failed`);
+      }
+
+      const accessToken = String(tokenSet["access_token"]);
+
+      const { error: dbError } = await db
+        .from("businesses")
+        .update({
+          shopify_shop: shop,
+          shopify_access_token: accessToken,
+        })
+        .eq("id", businessId);
+
+      if (dbError) {
+        logger.error({ dbError, businessId, shop }, "Supabase update failed after Shopify connect");
+        return res.redirect(`${dashboardUrl()}/dashboard?shopify_error=db_failed`);
+      }
+
+      const webhookId = await registerShopifyWebhook(shop, accessToken).catch((err) => {
+        logger.warn({ err, businessId, shop }, "Shopify webhook registration failed — skipping");
+        return null;
+      });
+
+      if (webhookId) {
+        await db
+          .from("businesses")
+          .update({ shopify_webhook_id: webhookId })
+          .eq("id", businessId)
+          .then(({ error }) => {
+            if (error) logger.warn({ error, businessId }, "failed to persist shopify_webhook_id");
+          });
+      }
+
+      logger.info({ businessId, shop, webhookId }, "Shopify connected");
+      res.redirect(`${dashboardUrl()}/dashboard?shopify_connected=true`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── POST /auth/shopify/disconnect ────────────────────────────────────────────
+
+router.post(
+  "/shopify/disconnect",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const businessId = req.body?.business_id as string | undefined;
+      if (!businessId) {
+        res.status(400).json({ error: "business_id is required", code: "MISSING_BUSINESS_ID" });
+        return;
+      }
+
+      const { data: business } = await db
+        .from("businesses")
+        .select("shopify_shop, shopify_access_token, shopify_webhook_id")
+        .eq("id", businessId)
+        .single();
+
+      if (business?.shopify_shop && business.shopify_access_token && business.shopify_webhook_id) {
+        await deleteShopifyWebhook(
+          business.shopify_shop,
+          business.shopify_access_token,
+          business.shopify_webhook_id
+        ).catch(() => {});
+      }
+
+      const { error } = await db
+        .from("businesses")
+        .update({
+          shopify_shop: null,
+          shopify_access_token: null,
+          shopify_webhook_id: null,
+        })
+        .eq("id", businessId);
+
+      if (error) {
+        logger.error({ error, businessId }, "Shopify disconnect DB update failed");
+        res.status(500).json({ error: error.message, code: "DB_ERROR" });
+        return;
+      }
+
+      logger.info({ businessId }, "Shopify disconnected");
       res.json({ ok: true });
     } catch (err) {
       next(err);
