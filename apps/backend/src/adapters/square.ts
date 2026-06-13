@@ -188,10 +188,15 @@ export async function squareWebhookHandler(req: Request, res: Response): Promise
     await processInvoice(
       business,
       {
+        invoiceId: (payment["id"] as string | undefined) ?? "unknown",
+        tenantId: (payment["location_id"] as string | undefined) ?? "unknown",
         invoiceNumber: (payment["receipt_number"] as string | undefined) ?? (payment["id"] as string | undefined) ?? "unknown",
         total: typeof amountMoney["amount"] === "number" ? (amountMoney["amount"] as number) / 100 : 0,
+        currency: (amountMoney["currency"] as string | undefined) ?? "USD",
+        date: new Date().toISOString().split("T")[0],
         customerEmail: (payment["buyer_email_address"] as string | undefined) ?? null,
-        customerName: "",
+        contactName: "",
+        lineItems: [],
       },
       "square"
     );
