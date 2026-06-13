@@ -258,8 +258,8 @@ async function handleZettlePurchaseCreated(
     total: totalMinorUnits / 100,
     currency: p.currency ?? "GBP",
     date: p.timestamp
-      ? new Date(p.timestamp).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0],
+      ? (new Date(p.timestamp).toISOString().split("T")[0] ?? new Date().toISOString().slice(0, 10))
+      : new Date().toISOString().slice(0, 10),
     customerEmail: null,
     contactName: "",
     lineItems: (p.products ?? []).map((item: any) => ({
